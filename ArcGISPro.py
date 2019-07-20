@@ -7,7 +7,25 @@ import sys
 from time import sleep
 
 # Parameters
-ParameterList = ['gdb',
+# gdb = arcpy.GetParameterAsText(0)
+# model_name = arcpy.GetParameterAsText(1)
+# model_locality = arcpy.GetParameterAsText(2)
+# model_pdf = arcpy.GetParameterAsText(3)
+# model_img = arcpy.GetParameterAsText(4)
+# model_model = arcpy.GetParameterAsText(5)
+# model_upload = arcpy.GetParameterAsText(6)
+# coords_long = arcpy.GetParameterAsText(7)
+# coords_lat = arcpy.GetParameterAsText(8)
+# model_desc = arcpy.GetParameterAsText(9)
+# model_date = arcpy.GetParameterAsText(10)
+# model_acq_type = arcpy.GetParameterAsText(11)
+# model_acq_by = arcpy.GetParameterAsText(12)
+# model_proc_by = arcpy.GetParameterAsText(13)
+# model_distance2outcrop = arcpy.GetParameterAsText(14)
+# model_images = arcpy.GetParameterAsText(15)
+# model_resolution = arcpy.GetParameterAsText(16)
+# model_reference = arcpy.GetParameterAsText(17)
+ParameterTextList = ['gdb',
                  'model_name',
                  'model_locality',
                  'model_pdf',
@@ -25,22 +43,20 @@ ParameterList = ['gdb',
                  'model_images',
                  'model_resolution',
                  'model_reference',
-                 'model_tags',
-                 'model_category']
+                 'model_tag',
+                 'model_category'
+                ]
 
-for c,key in enumerate(ParameterList):
+for c,key in enumerate(ParameterTextList):
     exec(key + " = arcpy.GetParameterAsText(c)")
 
-model_tags = model_tags.split(';')
-if len(model_tags) == 1:
-    model_tags = model_tags[0]
+model_tag_split = model_tag.split(';')
+if len(model_tag_split ) == 1:
+    model_tag_split = model_tag_split [0]
 
-model_category = model_category.split(';')
-if len(model_category) == 1:
-    model_category = model_category[0]
-
-arcpy.AddMessage(model_tags)
-arcpy.AddMessage(model_category)
+model_category_split  = model_category.split(';')
+if len(model_category_split ) == 1:
+    model_category_split  = model_category_split [0]
 
 # Workspace settings
 arcpy.env.workspace = gdb
@@ -65,16 +81,31 @@ fields = {'name': [model_name, 'TEXT', False],
           'reference': [model_reference, 'TEXT', False],
           'amount_images': [model_images, 'LONG', False],
           'acquisition_type': [model_acq_type, 'TEXT', False],
-          'tags': [model_tags, 'TEXT', True],
           'short_desc': [model_description_text, 'TEXT', True],
-          'popup_html': [None, 'TEXT', False]}  # Will be updated later
+          'popup_html': [None, 'TEXT', False], # Will be updated later
+          'tags': [model_tag, 'TEXT', False],
+          'category': [model_tag, 'TEXT', False],
+          }
 
 def CreateFields(fc):
     for field in fields:
         if fields[field][2]:
-            arcpy.AddField_management(fc, field, fields[field][1], field_length=fields[field][3])
+            arcpy.AddField_management(fc, field, fields[field][1], field_length=fields[field][2])
         else:
             arcpy.AddField_management(fc, field, fields[field][1])
+
+def AddFields(fc):
+    for field in fields:
+        if not (len(arcpy.ListFields(fc,field))>0):
+            arcpy.AddMessage('{} did not exist and has been created...'.format(field))
+            arcpy.AddField_management(fc, field, fields[field][1])
+
+            # if fields[field][2]:
+            #     arcpy.AddField_management(fc, field, fields[field][1], field_length=fields[field][3])
+            # else:
+            #     arcpy.AddField_management(fc, field, fields[field][1])
+            # arcpy.AddMessage('Added field {}'.format(field))
+
 
 
 def CreateGeometries(media_params, model_html):
@@ -97,6 +128,8 @@ def CreateGeometries(media_params, model_html):
             arcpy.CreateFeatureclass_management(gdb, os.path.basename(fc_path), fc,
                                                 spatial_reference=sr_out)
             CreateFields(fc_path)
+        else:
+            AddFields(fc_path)
 
     #     for some reason it wants an editing session, probably because it´s versioned and must be locked
     edit = arcpy.da.Editor(gdb)
@@ -104,8 +137,8 @@ def CreateGeometries(media_params, model_html):
     edit.startOperation()
 
     # Update urls for PDF and image, html for popup
-    fields['url_img'][0] = 'test'#media_params['Image']['url']
-    fields['url_pdf'][0] = 'test'#media_params['Image']['url']
+    fields['url_img'][0] = media_params['Image']['url']
+    fields['url_pdf'][0] = media_params['Image']['url']
     fields['popup_html'][0] = model_html
     fields_list = fields.items()
     fields_keys = [x[0] for x in fields_list]
@@ -146,12 +179,12 @@ def CreateGeometries(media_params, model_html):
         for row in arcpy.da.SearchCursor(simplify_path, ['SHAPE@', 'SHAPE@XY']):
             # Create centroid point
             centroid_point = row[1]
-            arcpy.AddMessage(centroid_point)
-            # centroid_pointWGS = row[0].projectAs(4326)
-            # coords_long = centroid_pointWGS.firstPoint.X
-            # coords_lat = centroid_pointWGS.firstPoint.Y
 
             cursor_poly.insertRow(fields_values + [row[0]])
+
+            coords_long = centroid_point[0]
+            coords_lat = centroid_point[1]
+            arcpy.AddMessage(centroid_point)
 
 
     elif model_model == "":
@@ -165,20 +198,20 @@ def CreateGeometries(media_params, model_html):
 
     with arcpy.da.InsertCursor(classes['POINT']['path'], fields_keys + ["SHAPE@"]) as cursor_pnt:
         cursor_pnt.insertRow(fields_values + [centroid_point])
-        arcpy.AddMessage()
         arcpy.AddMessage('Created centre point.')
     edit.stopOperation()
     edit.stopEditing(True)
 
 if __name__ == '__main__':
     model_popup_html = r'<span style="font-size: 1.2 rem; font-weight: bold">No model available!</span>'
+    # TODO add proper model popup html
 
     # Uploading data to SketchFab first.
     SketchFab = SketchfabClient()
     SF_data = {
         'name': model_name,
         'description': str(model_description_text),
-        'tags': model_tags,
+        'tags': model_tag_split,
         # 'categories': model_category, incompatible with the Arcgis interface...
         'license': 'CC Attribution',
         'private': 0,
@@ -187,48 +220,48 @@ if __name__ == '__main__':
         'isInspectable': True
     }
 
-    # SketchFab.response = SketchFab.post_model(SF_data, model_upload).json()
+    SketchFab.response = SketchFab.post_model(SF_data, model_upload).json()
 
-    # arcpy.AddMessage(SketchFab.response)
+    arcpy.AddMessage(SketchFab.response)
 
-    # SketchFab.check_upload(SketchFab.response['uid'], 1000, 750)
+    SketchFab.check_upload(SketchFab.response['uid'], 1000, 750)
 
     WordPress = WordpressClient()
-    # WordPress.upload_worpress_media(file = model_img)
+    WordPress.upload_worpress_media(file = model_img)
 
 
-    WordPress.media_params = 1
+    # WordPress.media_params = 'test'
     CreateGeometries(WordPress.media_params, model_popup_html)
-    #
-    # WordPress.generate_html(
-    #     iframe= SketchFab.embed_modelSimple(SketchFab.response['uid'], 1000, 750),
-    #     modelname=model_name,
-    #     description=str(model_description_text),
-    #     model_info={
-    #         'Locality': model_locality,
-    #         'Longitude': coords_long,
-    #         'Latitude': coords_lat  # expand upon this...
-    #     },
-    #     model_specs={
-    #         'Date acquired': model_date,
-    #         'Acquired by': model_acq_by,
-    #         'Acquisition method': model_acq_type,
-    #         'Processed by': model_proc_by,
-    #         '# images': model_images,
-    #         'Average distance': model_distance2outcrop,
-    #         'Resolution': model_resolution,
-    #         'Reference': model_resolution})
-    #
-    # post = {'title': 'third REST API post',
-    #         # 'slug': 'rest-api-1',
-    #         'status': 'publish',
-    #         'author': '4',
-    #         'excerpt': 'VOM featuring {}'.format(model_name),
-    #         'format': 'standard',
-    #         'post_tag':model_tags,
-    #         'category':model_category,
-    #         }
-    #
-    # post.update({'content': WordPress.html})
-    #
-    # WordPress.create_wordpress_post(post,featured_media=WordPress.imID)
+
+    WordPress.generate_html(
+        iframe= SketchFab.embed_modelSimple(SketchFab.response['uid'], 1000, 750),
+        modelname=model_name,
+        description=str(model_description_text),
+        model_info={
+            'Locality': model_locality,
+            'UTM33x/Longitude': coords_long,
+            'UTM33x/Latitude': coords_lat  # expand upon this...
+        },
+        model_specs={
+            'Date acquired': model_date,
+            'Acquired by': model_acq_by,
+            'Acquisition method': model_acq_type,
+            'Processed by': model_proc_by,
+            '# images': model_images,
+            'Average distance': model_distance2outcrop,
+            'Resolution': model_resolution,
+            'Reference': model_resolution})
+
+    post = {'title': 'third REST API post',
+            # 'slug': 'rest-api-1',
+            'status': 'publish',
+            'author': '4',
+            'excerpt': 'VOM featuring {}'.format(model_name),
+            'format': 'standard',
+            'post_tag':model_tag_split,
+            'category':model_category_split,
+            }
+
+    post.update({'content': WordPress.html})
+
+    WordPress.create_wordpress_post(post,featured_media=WordPress.imID)
