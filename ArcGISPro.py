@@ -7,24 +7,6 @@ import sys
 from time import sleep
 
 # Parameters
-# gdb = arcpy.GetParameterAsText(0)
-# model_name = arcpy.GetParameterAsText(1)
-# model_locality = arcpy.GetParameterAsText(2)
-# model_pdf = arcpy.GetParameterAsText(3)
-# model_img = arcpy.GetParameterAsText(4)
-# model_model = arcpy.GetParameterAsText(5)
-# model_upload = arcpy.GetParameterAsText(6)
-# coords_long = arcpy.GetParameterAsText(7)
-# coords_lat = arcpy.GetParameterAsText(8)
-# model_desc = arcpy.GetParameterAsText(9)
-# model_date = arcpy.GetParameterAsText(10)
-# model_acq_type = arcpy.GetParameterAsText(11)
-# model_acq_by = arcpy.GetParameterAsText(12)
-# model_proc_by = arcpy.GetParameterAsText(13)
-# model_distance2outcrop = arcpy.GetParameterAsText(14)
-# model_images = arcpy.GetParameterAsText(15)
-# model_resolution = arcpy.GetParameterAsText(16)
-# model_reference = arcpy.GetParameterAsText(17)
 ParameterTextList = ['gdb',
                  'model_name',
                  'model_locality',

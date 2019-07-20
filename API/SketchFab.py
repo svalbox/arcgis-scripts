@@ -73,8 +73,9 @@ class SketchfabClient(object):
         """
         src = 'https://sketchfab.com/models/' + model_uid + '/embed'
 
-        return '<iframe src={src} width="{width}" height="{height}" frameborder="0"></iframe>'.format(src, width,
-                                                                                                      height)
+        html = '<iframe src={src} width="{width}" height="{}" frameborder="0"></iframe>'.format(src=src, width=width, height=height)
+        return html
+
 if __name__ == '__main__':
     A = SketchfabClient()
     # Mandatory parameters
