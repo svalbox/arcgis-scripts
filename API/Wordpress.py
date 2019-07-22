@@ -33,7 +33,7 @@ class WordpressClient:
 
         :publish: boolean for adding as draft (default, False) or post (True)
 
-        :featured_media: if not None, takes the image ID
+        :featured_media: if not None, takes the image ID and links it to the post as featured_media
         :type: int
         '''
 
@@ -121,12 +121,12 @@ class WordpressClient:
             <tr>
             <th style="background: #ddd; border-bottom: 1px solid #999; font-size: larger; padding: 4px; text-align: center;" colspan="2"><span style="color: #333333;"><span style="font-weight: 400;">{modelname}</span></span></th>
             <tr>
-            <th style="background: #ddd; border-bottom: 1px solid #999; border-top: 1px solid #999; padding: 4px; text-align: center;" colspan="2"><span style="color: #333333;"><span style="font-size: 14px; font-weight: 400;">{modelinformation}</span></span></th>
+            <th style="background: #ddd; border-bottom: 1px solid #999; border-top: 1px solid #999; padding: 4px; text-align: center;" colspan="2"><span style="color: #333333;"><span style="font-size: 14px; font-weight: 400;">{model_info}</span></span></th>
             </tr>
             '''
         TableContentSpecs = '''
             <tr>
-            <th style="background: #ddd; border-bottom: 1px solid #999; border-top: 1px solid #999; padding: 4px; text-align: center;" colspan="2"><span style="color: #333333;"><span style="font-size: 14px; font-weight: 400;">{modelspecs}</span></span></th>
+            <th style="background: #ddd; border-bottom: 1px solid #999; border-top: 1px solid #999; padding: 4px; text-align: center;" colspan="2"><span style="color: #333333;"><span style="font-size: 14px; font-weight: 400;">{model_specs}</span></span></th>
             </tr>
             '''
         ModelInfo = '''
