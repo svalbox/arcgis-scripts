@@ -37,7 +37,12 @@ class WordpressClient:
         :type: int
         '''
 
-        data.update({'date': datetime.datetime.now().strftime('%y-%m-%dT%H:%M:%S')})
+        # data.update({'date': datetime.datetime.now().strftime('%y-%m-%dT%H:%M:%S')})
+        # TODO fix the date parameter!
+
+        arcpy.AddMessage('Tags and categories have to be manually selected on the Wordpress page for now. '
+                         'This will likely be resolved in a future update.')
+
         self.payload = data
         self.payload['status'] = 'publish' if publish else 'draft'
 
@@ -121,12 +126,12 @@ class WordpressClient:
             <tr>
             <th style="background: #ddd; border-bottom: 1px solid #999; font-size: larger; padding: 4px; text-align: center;" colspan="2"><span style="color: #333333;"><span style="font-weight: 400;">{modelname}</span></span></th>
             <tr>
-            <th style="background: #ddd; border-bottom: 1px solid #999; border-top: 1px solid #999; padding: 4px; text-align: center;" colspan="2"><span style="color: #333333;"><span style="font-size: 14px; font-weight: 400;">{model_info}</span></span></th>
+            <th style="background: #ddd; border-bottom: 1px solid #999; border-top: 1px solid #999; padding: 4px; text-align: center;" colspan="2"><span style="color: #333333;"><span style="font-size: 14px; font-weight: 400;">{model_info_title}</span></span></th>
             </tr>
             '''
         TableContentSpecs = '''
             <tr>
-            <th style="background: #ddd; border-bottom: 1px solid #999; border-top: 1px solid #999; padding: 4px; text-align: center;" colspan="2"><span style="color: #333333;"><span style="font-size: 14px; font-weight: 400;">{model_specs}</span></span></th>
+            <th style="background: #ddd; border-bottom: 1px solid #999; border-top: 1px solid #999; padding: 4px; text-align: center;" colspan="2"><span style="color: #333333;"><span style="font-size: 14px; font-weight: 400;">{model_specs_title}</span></span></th>
             </tr>
             '''
         ModelInfo = '''
@@ -149,28 +154,33 @@ class WordpressClient:
             '''
         arcpy.AddMessage(SketchfabContent)
         SketchfabContent = SketchfabContent.format(iframe=iframe, description=description)
-        TableContentModel = TableContentModel.format(modelname=modelname, model_info=model_info)
-        TableContentSpecs = TableContentSpecs.format(model_specs=model_specs)
+        TableContentModel = TableContentModel.format(modelname=modelname, model_info_title='Model information')
+        TableContentSpecs = TableContentSpecs.format(model_specs_title='Technical specs')
 
         ModelInfoFilled = ''
-        for key in ModelInfoContents:
+        for key in model_info:
             descriptor = key
-            descriptor_txt = ModelInfoContents[key]
+            descriptor_txt = model_info[key]
             ModelInfoFilled += ModelInfo.format(descriptor=descriptor, descriptor_txt=descriptor_txt)
 
         ModelSpecsFilled = ''
-        for key in ModelSpecsContents:
+        for key in model_specs:
             descriptor = key
-            descriptor_txt = ModelSpecsContents[key]
+            descriptor_txt = model_specs[key]
             ModelSpecsFilled += ModelSpecs.format(descriptor=descriptor, descriptor_txt=descriptor_txt)
 
-        WordPress.html = SketchfabContent + TableContentModel + ModelInfoFilled + TableContentSpecs + ModelSpecsFilled + Closing
+        self.html = SketchfabContent + TableContentModel + ModelInfoFilled + TableContentSpecs + ModelSpecsFilled + Closing
+
+# TODO create a request to the tags and categories available on wordpress and returns their ID
+# TODO create a function that creates a new tag/category ID if not available yet
+# TODO create a function that cross-checks categories listed on the front-end vs the tags aviailble in wordpress,
+#  and assigns correct tag ID's to the post
 
 if __name__ == '__main__':
     A = WordpressClient()
 
     A.upload_worpress_media(file = 'D:/temp/VIRTUAL OUTCROPS/2017_09_09_Billefjorden_Skansen/IMG_7835.JPG')
-    A.create_wordpress_post(post,featured_media=A.imID)
+    # A.create_wordpress_post(post)
 
     post = {'title': 'third REST API post',
             'slug': 'rest-api-1',
@@ -179,6 +189,8 @@ if __name__ == '__main__':
             'author': '4',
             'excerpt': 'Exceptional post!',
             'format': 'standard',
+            'portfolio_tags':'test',
+            'portfolio_categories':'[22]'
             }
-    A.create_wordpress_post(post)
+    A.create_wordpress_post(post,featured_media=A.imID)
     arcpy.AddMessage(A.media_params)

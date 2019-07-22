@@ -184,6 +184,8 @@ def CreateGeometries(media_params, model_html):
     edit.stopOperation()
     edit.stopEditing(True)
 
+    return coords_long, coords_lat
+
 if __name__ == '__main__':
     model_popup_html = r'<span style="font-size: 1.2 rem; font-weight: bold">No model available!</span>'
     # TODO add proper model popup html
@@ -213,7 +215,7 @@ if __name__ == '__main__':
 
 
     # WordPress.media_params = 'test'
-    CreateGeometries(WordPress.media_params, model_popup_html)
+    coords_long, coords_lat = CreateGeometries(WordPress.media_params, model_popup_html)
 
     WordPress.generate_html(
         iframe= SketchFab.embed_modelSimple(SketchFab.response['uid'], 1000, 750),
@@ -232,9 +234,9 @@ if __name__ == '__main__':
             '# images': model_images,
             'Average distance': model_distance2outcrop,
             'Resolution': model_resolution,
-            'Reference': model_resolution})
+            'Reference': model_reference})
 
-    post = {'title': 'third REST API post',
+    post = {'title': model_name,
             # 'slug': 'rest-api-1',
             'status': 'publish',
             'author': '4',
@@ -243,7 +245,6 @@ if __name__ == '__main__':
             'post_tag':model_tag_split,
             'category':model_category_split,
             }
-
     post.update({'content': WordPress.html})
 
-    WordPress.create_wordpress_post(post,featured_media=WordPress.imID)
+    WordPress.create_wordpress_post(post,featured_media=WordPress.imID,publish=True)
