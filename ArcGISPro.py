@@ -204,7 +204,7 @@ if __name__ == '__main__':
 
     SketchFab.response = SketchFab.post_model(SF_data, model_upload).json()
 
-    arcpy.AddMessage(SketchFab.response)
+    arcpy.AddMessage(SketchFab.response['uid'])
 
     SketchFab.check_upload(SketchFab.response['uid'], 1000, 750)
 
@@ -238,7 +238,7 @@ if __name__ == '__main__':
             # 'slug': 'rest-api-1',
             'status': 'publish',
             'author': '4',
-            'excerpt': 'VOM featuring {}'.format(model_name),
+            'excerpt': f'VOM featuring {model_name}',
             'format': 'standard',
             'post_tag':model_tag_split,
             'category':model_category_split,

@@ -148,7 +148,7 @@ class WordpressClient:
             </div>
             '''
         arcpy.AddMessage(SketchfabContent)
-        # SketchfabContent = SketchfabContent.format(iframe=iframe, description=description)
+        SketchfabContent = SketchfabContent.format(iframe=iframe, description=description)
         TableContentModel = TableContentModel.format(modelname=modelname, model_info=model_info)
         TableContentSpecs = TableContentSpecs.format(model_specs=model_specs)
 

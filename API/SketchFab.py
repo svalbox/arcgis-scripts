@@ -71,9 +71,9 @@ class SketchfabClient(object):
         """
         Instead of using Sketchfab's Embed function, create our own little iframe.
         """
-        src = 'https://sketchfab.com/models/' + model_uid + '/embed'
-
-        html = '<iframe src={src} width="{width}" height="{}" frameborder="0"></iframe>'.format(src=src, width=width, height=height)
+        arcpy.AddMessage(f'Embedding SketchFab model {model_uid} into simple HTML iframe')
+        html = f'<iframe src=https://sketchfab.com/models/{model_uid}/embed width="{width}" height="{height}" ' \
+            f'frameborder="0"></iframe>'
         return html
 
 if __name__ == '__main__':
