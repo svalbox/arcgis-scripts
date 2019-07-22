@@ -242,8 +242,8 @@ if __name__ == '__main__':
             'author': '4',
             'excerpt': f'VOM featuring {model_name}',
             'format': 'standard',
-            'post_tag':model_tag_split,
-            'category':model_category_split,
+            # 'portfolio_tag':model_tag_split,
+            'portfolio_category':[22],
             }
     post.update({'content': WordPress.html})
 

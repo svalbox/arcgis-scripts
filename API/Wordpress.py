@@ -174,7 +174,7 @@ class WordpressClient:
 # TODO create a request to the tags and categories available on wordpress and returns their ID
 # TODO create a function that creates a new tag/category ID if not available yet
 # TODO create a function that cross-checks categories listed on the front-end vs the tags aviailble in wordpress,
-#  and assigns correct tag ID's to the post
+#  and assigns correct tag ID's to the post. See this page for tips: https://developer.wordpress.org/rest-api/reference/tags/
 
 if __name__ == '__main__':
     A = WordpressClient()
@@ -189,8 +189,8 @@ if __name__ == '__main__':
             'author': '4',
             'excerpt': 'Exceptional post!',
             'format': 'standard',
-            'portfolio_tags':'test',
-            'portfolio_categories':'[22]'
+            # 'portfolio_tag':'test',
+            'portfolio_category': [22]
             }
-    A.create_wordpress_post(post,featured_media=A.imID)
+    A.create_wordpress_post(post,featured_media=A.imID,publish=True)
     arcpy.AddMessage(A.media_params)
