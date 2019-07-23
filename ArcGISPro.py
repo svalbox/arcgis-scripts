@@ -54,8 +54,8 @@ model_description_text = open(model_desc).read()
 fields = {'name': [model_name, 'TEXT', False],
           'locality': [model_locality, 'TEXT', False],
           'date': [model_date, 'DATE', False],
-          'url_img': [None, 'TEXT', False],  # Will be updated later
-          'url_pdf': [None, 'TEXT', False],  # Will be updated later
+          'svalbox_url': [None, 'TEXT', False],  # Will be updated later
+          # 'url_pdf': [None, 'TEXT', False],  # Will be updated later
           'altitude_distance': [model_distance2outcrop, 'LONG', False],
           'resolution': [model_resolution, 'DOUBLE', False],
           'acquired_by': [model_acq_by, 'TEXT', False],
@@ -90,9 +90,12 @@ def AddFields(fc):
 
 
 
-def CreateGeometries(media_params, model_html):
+def CreateGeometries(model_html,**kwargs):
     """Create geometries based on the model file provided or get center coordinates
        from dialog"""
+
+    if 'fields' in kwargs:
+        fields.update(kwargs['fields'])
 
     arcpy.AddMessage('Starting to create geometries...')
 
@@ -119,8 +122,8 @@ def CreateGeometries(media_params, model_html):
     edit.startOperation()
 
     # Update urls for PDF and image, html for popup
-    fields['url_img'][0] = media_params['Image']['url']
-    fields['url_pdf'][0] = media_params['Image']['url']
+    # fields['svalbox_url'][0] = posturl
+    # fields['url_pdf'][0] = media_params['Image']['url'] # TODO : make sure whether to really implement 3D pdfs...
     fields['popup_html'][0] = model_html
     fields_list = fields.items()
     fields_keys = [x[0] for x in fields_list]
@@ -206,16 +209,35 @@ if __name__ == '__main__':
 
     SketchFab.response = SketchFab.post_model(SF_data, model_upload).json()
 
-    arcpy.AddMessage(SketchFab.response['uid'])
+    arcpy.AddMessage('SketchFab has given this model ID {}.'.format(SketchFab.response['uid']))
 
     SketchFab.check_upload(SketchFab.response['uid'], 1000, 750)
 
     WordPress = WordpressClient()
     WordPress.upload_worpress_media(file = model_img)
 
+    post = {'title': model_name,
+            # 'slug': 'rest-api-1',
+            'status': 'publish',
+            'author': '4',
+            'excerpt': f'VOM featuring {model_name}',
+            'format': 'standard',
+            # 'portfolio_tag':model_tag_split,
+            'portfolio_category': [22],
+            'content':'Updating...'
+            }
+    WordPress.create_wordpress_post(post, featured_media=WordPress.imID, publish=False)
+    WordPress.create_wordpress_post(post, featured_media=WordPress.imID, publish=False, update=True)
+    # TODO: cleaner way of getting nice url...
+
+    xtraFields = {'svalbox_postID':WordPress.postresponse['id'],
+                  'svalbox_url':WordPress.postresponse['link'],
+                  # 'svalbox_img_url':WordPress.media_params['url'] #TODO
+                  }
+    # TODO: Add all important model IDs to the database dict.
 
     # WordPress.media_params = 'test'
-    coords_long, coords_lat = CreateGeometries(WordPress.media_params, model_popup_html)
+    coords_long, coords_lat = CreateGeometries(model_popup_html,fields=xtraFields)
 
     WordPress.generate_html(
         iframe= SketchFab.embed_modelSimple(SketchFab.response['uid'], 1000, 750),
@@ -236,15 +258,6 @@ if __name__ == '__main__':
             'Resolution': model_resolution,
             'Reference': model_reference})
 
-    post = {'title': model_name,
-            # 'slug': 'rest-api-1',
-            'status': 'publish',
-            'author': '4',
-            'excerpt': f'VOM featuring {model_name}',
-            'format': 'standard',
-            # 'portfolio_tag':model_tag_split,
-            'portfolio_category':[22],
-            }
-    post.update({'content': WordPress.html})
+    post['content'] = WordPress.html
 
-    WordPress.create_wordpress_post(post,featured_media=WordPress.imID,publish=True)
+    WordPress.create_wordpress_post(post,featured_media=WordPress.imID,publish=True,update=True)

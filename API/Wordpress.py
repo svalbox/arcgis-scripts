@@ -3,6 +3,7 @@ import json
 import base64
 import os
 import arcpy
+from time import sleep
 import datetime
 from API.RetrievePasswords import Passwords
 
@@ -25,13 +26,15 @@ class WordpressClient:
         self.url = url
 
 
-    def create_wordpress_post(self, data, type='portfolio',publish=False,featured_media = None):
+    def create_wordpress_post(self, data, type='portfolio',publish=False,update=None,featured_media = None):
         '''
 
         :param data: dict with all required entries for the post
         :return:
 
         :publish: boolean for adding as draft (default, False) or post (True)
+
+        :update: boolean for adding as draft (default, False) or post (True)
 
         :featured_media: if not None, takes the image ID and links it to the post as featured_media
         :type: int
@@ -49,21 +52,34 @@ class WordpressClient:
         if featured_media is not None:
             self.payload.update({'featured_media':featured_media})
 
+        if update is None:
+            posturl = self.url + '/posts'
+            portfoliourl = self.url + '/portfolio'
+        elif update is True:
+            posturl = self.url + '/posts/' + str(self.postresponse['id'])
+            portfoliourl = self.url + '/portfolio/' + str(self.postresponse['id'])
+            arcpy.AddMessage('Updating WordPress post {}.'.format(self.postresponse['id']))
+
+
         self.headers['Content-Type'] = 'application/json'
 
         if type =='post':
-            r = requests.post(self.url+'/posts', data=json.dumps(self.payload), headers=self.headers)
+            r = requests.post(posturl, data=json.dumps(self.payload), headers=self.headers)
 
         elif type == 'portfolio':
             self.payload.update({'portfolio_categories':[22]})
-            r = requests.post(self.url + '/portfolio', data=json.dumps(self.payload), headers=self.headers)
+            r = requests.post(portfoliourl, data=json.dumps(self.payload), headers=self.headers)
 
 
-        response = json.loads(r.content)
+        self.postresponse = json.loads(r.content)
+
         try:
-            arcpy.AddMessage(response['link'])
+            if update is None:
+                arcpy.AddMessage('A post has been posted to {}.'.format(self.postresponse['link']))
+            elif update is True:
+                arcpy.AddMessage('{} has been updated.'.format(self.postresponse['link']))
         except:
-            arcpy.AddMessage(response)
+            arcpy.AddMessage(self.postresponse)
             arcpy.AddMessage('Have you tried checking the server .htaccess file for correct rule-rewriting?')
             raise
 
@@ -192,5 +208,8 @@ if __name__ == '__main__':
             # 'portfolio_tag':'test',
             'portfolio_category': [22]
             }
-    A.create_wordpress_post(post,featured_media=A.imID,publish=True)
+    A.create_wordpress_post(post,featured_media=A.imID,publish=False)
+    # sleep(30)
+    post['content']='Even more awesome!'
+    A.create_wordpress_post(post,featured_media=A.imID,publish=True,update=True)
     arcpy.AddMessage(A.media_params)
