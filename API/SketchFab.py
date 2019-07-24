@@ -28,7 +28,7 @@ class SketchfabClient(object):
                                  data=data,
                                  files={'modelFile': open(model_path, 'rb')},
                                  headers=self._headers)
-
+        self.response = response.json()
         return response
 
     def check_upload(self, model_uid, width, height):
@@ -38,7 +38,7 @@ class SketchfabClient(object):
             'maxheight': height
         }
         try:
-            arcpy.AddMessage('Checking whether model has been uploaded every minute for the next 30 minutes...')
+            arcpy.AddMessage('Checking whether model has been uploaded to SketchFab (at 1 minute intervals).')
             for i in range(30):
                 response = self.embed_model(params)
 
@@ -55,7 +55,8 @@ class SketchfabClient(object):
 
         if int(response.status_code) not in [200, 201, 202]:
             raise requests.exceptions.HTTPError(str(response))
-        arcpy.AddMessage('Model has successfully been uploaded') #and can be accessed here: https://sketchfab.com/3d-models/{}'.format{response['uid']})
+        arcpy.AddMessage('A corresponding model is available on SketchFab.') #and can be accessed here: https://sketchfab.com/3d-models/{}'.format{response['uid']})
+        self.response = response.json()
         return response
 
     def embed_model(self, params):

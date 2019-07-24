@@ -10,10 +10,10 @@ from time import sleep
 ParameterTextList = ['gdb',
                  'model_name',
                  'model_locality',
-                 'model_pdf',
                  'model_img',
                  'model_model',
                  'model_upload',
+                 'sketchfab_id',
                  'coords_long',
                  'coords_lat',
                  'model_desc',
@@ -54,7 +54,7 @@ model_description_text = open(model_desc).read()
 fields = {'name': [model_name, 'TEXT', False],
           'locality': [model_locality, 'TEXT', False],
           'date': [model_date, 'DATE', False],
-          'svalbox_url': [None, 'TEXT', False],  # Will be updated later
+          # 'svalbox_url': [None, 'TEXT', False],  # Will be updated later
           # 'url_pdf': [None, 'TEXT', False],  # Will be updated later
           'altitude_distance': [model_distance2outcrop, 'LONG', False],
           'resolution': [model_resolution, 'DOUBLE', False],
@@ -77,18 +77,21 @@ def CreateFields(fc):
             arcpy.AddField_management(fc, field, fields[field][1])
 
 def AddFields(fc):
+    '''
+
+    :param fc: database connection to which fields should be added. For now, fields are a global parameter. This is
+        likely to be changed in future updates.
+    :return:
+    '''
     for field in fields:
         if not (len(arcpy.ListFields(fc,field))>0):
-            arcpy.AddMessage('{} did not exist and has been created...'.format(field))
-            arcpy.AddField_management(fc, field, fields[field][1])
-
-            # if fields[field][2]:
-            #     arcpy.AddField_management(fc, field, fields[field][1], field_length=fields[field][3])
-            # else:
-            #     arcpy.AddField_management(fc, field, fields[field][1])
-            # arcpy.AddMessage('Added field {}'.format(field))
-
-
+            try:
+                arcpy.AddField_management(fc, field, fields[field][1])
+                arcpy.AddMessage(f'{field} did not exist and has been created...')
+            except arcpy.ExecuteError:
+                arcpy.AddError('Adding and removing fields requires the ArcGIS service to be shut down. Please use '
+                               'ArcMAP to temporarily shut down the server. And do not forget restarting it again...')
+                raise
 
 def CreateGeometries(model_html,**kwargs):
     """Create geometries based on the model file provided or get center coordinates
@@ -195,10 +198,11 @@ if __name__ == '__main__':
 
     # Uploading data to SketchFab first.
     SketchFab = SketchfabClient()
+    SketchFab_tags = model_tag_split.extend(['Svalbox','Svalbard','UNIS'])
     SF_data = {
         'name': model_name,
         'description': str(model_description_text),
-        'tags': model_tag_split,
+        'tags': SketchFab_tags,
         # 'categories': model_category, incompatible with the Arcgis interface...
         'license': 'CC Attribution',
         'private': 0,
@@ -207,11 +211,15 @@ if __name__ == '__main__':
         'isInspectable': True
     }
 
-    SketchFab.response = SketchFab.post_model(SF_data, model_upload).json()
 
-    arcpy.AddMessage('SketchFab has given this model ID {}.'.format(SketchFab.response['uid']))
-
-    SketchFab.check_upload(SketchFab.response['uid'], 1000, 750)
+    if len(sketchfab_id) > 0:
+        arcpy.AddMessage('Using user-specified SketchFab ID {}.'.format(sketchfab_id))
+        SketchFab.check_upload(sketchfab_id, 1000, 750)
+        SketchFab.response.update({'uid':sketchfab_id})
+    else:
+        SketchFab.response = SketchFab.post_model(SF_data, model_upload).json()
+        arcpy.AddMessage('SketchFab has given this model ID {}.'.format(SketchFab.response['uid']))
+        SketchFab.check_upload(SketchFab.response['uid'], 1000, 750)
 
     WordPress = WordpressClient()
     WordPress.upload_worpress_media(file = model_img)
@@ -227,12 +235,12 @@ if __name__ == '__main__':
             'content':'Updating...'
             }
     WordPress.create_wordpress_post(post, featured_media=WordPress.imID, publish=False)
-    WordPress.create_wordpress_post(post, featured_media=WordPress.imID, publish=False, update=True)
     # TODO: cleaner way of getting nice url...
 
-    xtraFields = {'svalbox_postID':WordPress.postresponse['id'],
-                  'svalbox_url':WordPress.postresponse['link'],
-                  # 'svalbox_img_url':WordPress.media_params['url'] #TODO
+    xtraFields = {'svalbox_postID':[WordPress.postresponse['id'], 'LONG', False],
+                  'svalbox_url':[WordPress.postresponse['link'], 'TEXT', False],
+                  'sketchfab_id':[SketchFab.response['uid'], 'TEXT', False],
+                  # 'svalbox_img_url':['test', 'TEXT', False] #TODO
                   }
     # TODO: Add all important model IDs to the database dict.
 
