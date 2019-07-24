@@ -215,7 +215,6 @@ if __name__ == '__main__':
     if len(sketchfab_id) > 0:
         arcpy.AddMessage('Using user-specified SketchFab ID {}.'.format(sketchfab_id))
         SketchFab.check_upload(sketchfab_id, 1000, 750)
-        SketchFab.response.update({'uid':sketchfab_id})
     else:
         SketchFab.response = SketchFab.post_model(SF_data, model_upload).json()
         arcpy.AddMessage('SketchFab has given this model ID {}.'.format(SketchFab.response['uid']))

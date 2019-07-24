@@ -57,6 +57,7 @@ class SketchfabClient(object):
             raise requests.exceptions.HTTPError(str(response))
         arcpy.AddMessage('A corresponding model is available on SketchFab.') #and can be accessed here: https://sketchfab.com/3d-models/{}'.format{response['uid']})
         self.response = response.json()
+        self.response.update({'uid':model_uid})
         return response
 
     def embed_model(self, params):
