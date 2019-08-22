@@ -34,11 +34,11 @@ for c,key in enumerate(ParameterTextList):
 
 model_tag_split = model_tag.split(';')
 if len(model_tag_split ) == 1:
-    model_tag_split = model_tag_split [0]
+    model_tag_split = model_tag_split[0]
 
 model_category_split  = model_category.split(';')
 if len(model_category_split ) == 1:
-    model_category_split  = model_category_split [0]
+    model_category_split  = model_category_split[0]
 
 # Workspace settings
 arcpy.env.workspace = gdb
@@ -198,7 +198,11 @@ if __name__ == '__main__':
 
     # Uploading data to SketchFab first.
     SketchFab = SketchfabClient()
-    SketchFab_tags = model_tag_split.extend(['Svalbox','Svalbard','UNIS'])
+
+    if isinstance(model_tag_split, str):
+        SketchFab_tags = [model_tag_split,'Svalbox','Svalbard','UNIS']
+    else:
+        SketchFab_tags = model_tag_split.extend(['Svalbox','Svalbard','UNIS'])
     SF_data = {
         'name': model_name,
         'description': str(model_description_text),
@@ -261,8 +265,8 @@ if __name__ == '__main__':
             'Acquisition method': model_acq_type,
             'Processed by': model_proc_by,
             '# images': model_images,
-            'Average distance': model_distance2outcrop,
-            'Resolution': model_resolution,
+            'Average distance (m)': model_distance2outcrop,
+            'Resolution (cm/pix)': model_resolution,
             'Reference': model_reference})
 
     post['content'] = WordPress.html
