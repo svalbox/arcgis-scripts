@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+  <style>
+    html,
+    body,
+    #map {
+      height: 100%;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+    }
+	.info {
+	padding: 6px 8px;
+	font: 14px/16px Arial, Helvetica, sans-serif;
+	background: white;
+	background: rgba(255,255,255,0.8);
+	box-shadow: 0 0 15px rgba(0,0,0,0.2);
+	border-radius: 5px;
+	width: 350px;
+	}
+	.info h4 {
+		margin: 0 0 5px;
+		color: #777;
+	}
+
+	.layertoggle {
+		padding: 6px 8px;
+		font: 14px/16px Arial, Helvetica, sans-serif;
+		background: white;
+		background: rgba(255,255,255,0.8);
+		box-shadow: 0 0 15px rgba(0,0,0,0.2);
+		border-radius: 5px;
+	}
+  </style>
+
+<body>
+
+  <!-- Load Leaflet from CDN-->
+   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.5.1/dist/leaflet.css"
+    integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ=="
+    crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.5.1/dist/leaflet.js"
+    integrity="sha512-GffPMF3RvMeYyc1LWMHtK8EbPv0iNZ8/oTtHPx9/cc2ILxQ+u905qIwdpULaqDkyBKgOaB57QTMg7ztg8Jm2Og=="
+    crossorigin=""></script>  
+
+  <!-- Load Esri Leaflet from CDN -->
+  <script src="https://unpkg.com/esri-leaflet@2.3.1/dist/esri-leaflet.js"
+    integrity="sha512-Np+ry4Dro5siJ1HZ0hTwn2jsmu/hMNrYw1EIK9EjsEVbDge4AaQhjeTGRg2ispHg7ZgDMVrSDjNrzH/kAO9Law=="
+    crossorigin=""></script>
+
+  <!-- Load Esri Leaflet Renderers from CDN -->
+  <script src="https://unpkg.com/esri-leaflet-renderers@2.0.6/dist/esri-leaflet-renderers.js"
+    integrity="sha512-mhpdD3igvv7A/84hueuHzV0NIKFHmp2IvWnY5tIdtAHkHF36yySdstEVI11JZCmSY4TCvOkgEoW+zcV/rUfo0A=="
+    crossorigin=""></script>
+	
+ <!-- Load Leaflet MarkerCluster and Esri Leaflet Cluster from CDN -->
+  <link rel="stylesheet" type="text/css"
+    href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css"
+    integrity="sha512-BBToHPBStgMiw0lD4AtkRIZmdndhB6aQbXpX7omcrXeG2PauGBl2lzq2xUZTxaLxYz5IDHlmneCZ1IJ+P3kYtQ=="
+    crossorigin="">
+  <link rel="stylesheet" type="text/css" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css"
+    integrity="sha512-RLEjtaFGdC4iQMJDbMzim/dOvAu+8Qp9sw7QE4wIMYcg2goVoivzwgSZq9CsIxp4xKAZPKh5J2f2lOko2Ze6FQ=="
+    crossorigin="">
+  <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"
+    integrity="sha512-MQlyPV+ol2lp4KodaU/Xmrn+txc1TP15pOBF/2Sfre7MRsA/pB4Vy58bEqe9u7a7DczMLtU5wT8n7OblJepKbg=="
+    crossorigin=""></script>
+  <script src="https://unpkg.com/esri-leaflet-cluster@2.0.1/dist/esri-leaflet-cluster.js"
+    integrity="sha512-2/Nwrks+A2omjKeWrF4TKFLIrUbAhSl8EDEm6xunuwXXYqMoJI71PZtlW0/vqt9d3DOyP1md/bzAnNH2KuAhaQ=="
+    crossorigin=""></script>
+  <!-- Proj4 and Proj4Leaflet -->
+  <script src="https://unpkg.com/proj4@2.4.3"></script>
+  <script src="https://unpkg.com/proj4leaflet@1.0.1"></script>
+
+  <div id="map"></div>
+
+  <script>
+  
+    var map = L.map('map', {
+      center: [78.2, 15.6],
+      zoom: 5,
+	  minZoom: 4
+    });
+	
+	map.setMaxBounds(map.getBounds());
+
+    var base = L.esri.basemapLayer('Streets').addTo(map);
+
+	
+	const VOMs_points = L.esri.featureLayer({
+      url: 'http://gis.unis.no/arcgis/rest/services/Virtual_Outcrops/VOMs/MapServer/0',
+    })
+	const VOMs_footprints = L.esri.featureLayer({
+      url: 'http://gis.unis.no/arcgis/rest/services/Virtual_Outcrops/VOMs/MapServer/1',
+    });
+	
+	var VOMs = L.layerGroup([VOMs_points,VOMs_footprints]).addTo(map);
+	
+	const Geophysics_seismic = L.esri.featureLayer({
+      url: 'https://gis.unis.no:6443/arcgis/rest/services/Geophysical/Svalbard_Geophysical/MapServer/2',
+    }).addTo(map);
+	
+	const Sedimentarylogs = L.esri.featureLayer({
+      url: 'https://gis.unis.no:6443/arcgis/rest/services/Geophysical/Svalbard_Geophysical/MapServer/0',
+    }).addTo(map);
+	
+	const Explorationwells = L.esri.featureLayer({
+      url: 'https://gis.unis.no:6443/arcgis/rest/services/Geophysical/Svalbard_Geophysical/MapServer/1',
+    }).addTo(map);
+	
+	
+	
+
+    VOMs_points.bindPopup(function (evt) {
+      return L.Util.template('<h3>{name}<br>(<a href={svalbox_url} target="_blank">VOM & specs available here</a>)</h3><hr /><p> <a href={svalbox_url} target="_blank"><img src={url_img} width=250></a>', evt.feature.properties);
+    });
+	VOMs_footprints.bindPopup(function (evt) {
+      return L.Util.template('<h3>{name}<br>(<a href={svalbox_url} target="_blank">VOM & specs available here</a>)</h3><hr /><p> <a href={svalbox_url} target="_blank"><img src={url_img} width=250></a>', evt.feature.properties);
+    });
+	
+	Geophysics_seismic.bindPopup(function (evt) {
+      return L.Util.template('<h3>{Linename}</h3><hr /><p> Part of survey {Survey} conducted by {Company}.', evt.feature.properties);
+    });
+	Sedimentarylogs.bindPopup(function (evt) {
+      return L.Util.template('<h3>Sedimentary logs: {Name}</h3>', evt.feature.properties);
+    });
+	Explorationwells.bindPopup(function (evt) {
+      return L.Util.template('<h3>Exploration well: {Name}</h3>', evt.feature.properties);
+    });
+	
+
+
+	var info = L.control();
+
+	info.onAdd = function (map) {
+	  this._div = L.DomUtil.create('div', 'info'); // create a div with a class "info"
+	  this.update();
+	  return this._div;
+	};
+
+	// method that we will use to update the control based on feature properties passed
+	info.update = function (props) {
+	  this._div.innerHTML = '<h4>Svalbox Map Interface</h4><hr /> 	  ' +(props ?
+		'<b>' + props.name + '</b><br />' + props.density + ' people / mi<sup>2</sup>'
+		: 'Click on a feature on the map to open its properties.');
+	};
+
+    info.addTo(map);
+
+		
+	
+	var baseLayers = {
+      Basemap: base
+    };
+
+	var overlays = {
+      'Exploration wells': Explorationwells,
+	  'Sedimentary logs': Sedimentarylogs,
+	  Seismic: Geophysics_seismic,
+	  'Virtual outcrop models': VOMs,
+    };
+	var layertoggle = L.control.layers(baseLayers, overlays).addTo(map);
+	
+  </script>
+</body>
+</html>
