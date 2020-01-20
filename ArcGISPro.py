@@ -220,7 +220,7 @@ def CreateGeometries(model_html,classes,fields,**kwargs):
 
     return coords_long, coords_lat
 
-def UpdateGeometries(classes,fields, Svalbox_postID):
+def UpdateDatabaseFields(classes,fields, Svalbox_postID):
     classes=CheckClasses(classes,fields)
     fields_list = fields.items()
     fields_keys = [x[0] for x in fields_list]
@@ -302,7 +302,7 @@ if __name__ == '__main__':
 
     tempfields= {'coords_long': [coords_long, 'DOUBLE', False],
                    'coords_lat': [coords_lat, 'DOUBLE', False]}
-    UpdateGeometries(classes, tempfields,Svalbox_postID)
+    UpdateDatabaseFields(classes, tempfields,Svalbox_postID)
 
     WordPress.generate_html(
         iframe= SketchFab.embed_modelSimple(SketchFab.response['uid'], 1000, 750),
