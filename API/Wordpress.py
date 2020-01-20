@@ -129,11 +129,10 @@ class WordpressClient:
             <div class="sketchfab-embed-wrapper">
     
             {iframe}
-            <p style="font-size: 13px; font-weight: normal; margin: 5px; color: #4a4a4a;"><a style="font-weight: bold; color: #1caad9;"</a></p>
-    
+            <p style="font-size: 13px; font-weight: normal; margin: 5px; color: #4a4a4a;"><a style="font-weight: bold; color: #1caad9;"</a>
             {description}
-    
-    
+            </p>
+ 
             </div>'''
         TableContentModel = '''
             <div class="floatRight">

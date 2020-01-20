@@ -3,12 +3,17 @@ import os
 from API.RetrievePasswords import Passwords
 from API.SketchFab import SketchfabClient
 from API.Wordpress import WordpressClient
+#from API.Archive import WordpressClient
 import sys
 from time import sleep
+
+import numpy as np
+import pandas as pd
 
 # Parameters
 ParameterTextList = ['gdb',
                  'model_name',
+                 'model_place',
                  'model_locality',
                  'model_img',
                  'model_model',
@@ -30,8 +35,9 @@ ParameterTextList = ['gdb',
                 ]
 
 for c,key in enumerate(ParameterTextList):
+    Parameters = {key:arcpy.GetParameterAsText(c)}
     exec(key + " = arcpy.GetParameterAsText(c)")
-
+    
 model_tag_split = model_tag.split(';')
 if len(model_tag_split ) == 1:
     model_tag_split = model_tag_split[0]
@@ -52,6 +58,7 @@ sr_out = arcpy.SpatialReference(32633)
 model_description_text = open(model_desc).read()
 
 fields = {'name': [model_name, 'TEXT', False],
+          'place':[model_place,'TEXT', False],
           'locality': [model_locality, 'TEXT', False],
           'date': [model_date, 'DATE', False],
           # 'svalbox_url': [None, 'TEXT', False],  # Will be updated later
@@ -189,6 +196,9 @@ def CreateGeometries(model_html,**kwargs):
         arcpy.AddMessage('Created centre point.')
     edit.stopOperation()
     edit.stopEditing(True)
+    
+    fields['coords_long'][0] = coords_long
+    fields['coords_lat'][0] = coords_lat
 
     return coords_long, coords_lat
 
@@ -243,6 +253,7 @@ if __name__ == '__main__':
     xtraFields = {'svalbox_postID':[WordPress.postresponse['id'], 'LONG', False],
                   'svalbox_url':[WordPress.postresponse['link'], 'TEXT', False],
                   'sketchfab_id':[SketchFab.response['uid'], 'TEXT', False],
+                  
                   # 'svalbox_img_url':['test', 'TEXT', False] #TODO
                   }
     # TODO: Add all important model IDs to the database dict.
@@ -255,9 +266,10 @@ if __name__ == '__main__':
         modelname=model_name,
         description=str(model_description_text),
         model_info={
-            'Locality': model_locality,
-            'UTM33x/Longitude': coords_long,
-            'UTM33x/Latitude': coords_lat  # expand upon this...
+            'Locality': model_name,
+            'Region': model_locality,
+            'UTM33x/Longitude': round(coords_long,2),
+            'UTM33x/Latitude': round(coords_lat,2)  # expand upon this...
         },
         model_specs={
             'Date acquired': model_date,
@@ -272,3 +284,4 @@ if __name__ == '__main__':
     post['content'] = WordPress.html
 
     WordPress.create_wordpress_post(post,featured_media=WordPress.imID,publish=True,update=True)
+    

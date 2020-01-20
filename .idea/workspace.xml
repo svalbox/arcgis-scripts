@@ -1,12 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="b4f0317f-7da7-4cf4-b191-8d426bb9534b" name="Default Changelist" comment="Improved SketchFab code to handle previously uploaded models - this &#10;requires a parameter update on the ArcGIS Pro side as well.">
-      <change beforePath="$PROJECT_DIR$/.idea/Svalbox.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/Svalbox.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ArcGISPro.py" beforeDir="false" afterPath="$PROJECT_DIR$/ArcGISPro.py" afterDir="false" />
-    </list>
+    <list default="true" id="b4f0317f-7da7-4cf4-b191-8d426bb9534b" name="Default Changelist" comment="" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -140,6 +135,7 @@
       </list>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+    <option name="SET_USER_NAME_GLOBALLY" value="false" />
   </component>
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
@@ -325,7 +321,7 @@
       <workItem from="1563905028538" duration="13121000" />
       <workItem from="1564057406476" duration="937000" />
       <workItem from="1564163843786" duration="1046000" />
-      <workItem from="1566487217606" duration="2194000" />
+      <workItem from="1566487217606" duration="2292000" />
     </task>
     <task id="LOCAL−00001" summary="Base code">
       <created>1563650460357</created>
@@ -405,11 +401,17 @@
       <option name="presentableId" value="LOCAL−00013" />
       <updated>1563969533914</updated>
     </task>
-    <option name="localTasksCounter" value="14" />
+    <task id="LOCAL−00014" summary="Improved SketchFab code to handle previously uploaded models - this &#10;requires a parameter update on the ArcGIS Pro side as well.">
+      <created>1566489846214</created>
+      <option name="number" value="LOCAL−00014" />
+      <option name="presentableId" value="LOCAL−00014" />
+      <updated>1566489846214</updated>
+    </task>
+    <option name="localTasksCounter" value="15" />
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="49886000" />
+    <option name="totallyTimeSpent" value="49984000" />
   </component>
   <component name="TodoView" selected-index="4">
     <todo-panel id="selected-file">
@@ -422,7 +424,6 @@
   </component>
   <component name="ToolWindowManager">
     <frame x="-8" y="-8" width="1936" height="1176" extended-state="6" />
-    <editor active="true" />
     <layout>
       <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.12793177" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
