@@ -90,15 +90,20 @@ class WordpressClient:
         '''
         media = {'file': open(file, 'rb')}
         image = requests.post(self.url + '/media', headers=self.headers, files=media)
-        self.imsrc = json.loads(image.content.decode('utf-8'))['link']
-        self.imID = json.loads(image.content.decode('utf-8'))['id']
+        try:
+            self.imsrc = json.loads(image.content.decode('utf-8'))['link']
+            self.imID = json.loads(image.content.decode('utf-8'))['id']
+        except:
+            arcpy.AddError(f'Login failed with request code {image}. \
+                           If Response [401], please check .htaccess for access.')
+            raise
 
         self.media_params = {'Image':
                         {'path': file,
                          'name': os.path.basename(file),
                          'url':self.imsrc}}
-
-        arcpy.AddMessage('Your image is published on ' + json.loads(image.content)['link'])
+        #arcpy.AddMessage(json.loads(image.content))
+        arcpy.AddMessage('Your image is published on ' + json.loads(image.content)['guid']['rendered'])
 
     def generate_html(self,iframe,
                 modelname,
@@ -127,11 +132,13 @@ class WordpressClient:
         SketchfabContent = '''
             <div class="container">
             <div class="sketchfab-embed-wrapper">
-    
+
             {iframe}
-            <p style="font-size: 13px; font-weight: normal; margin: 5px; color: #4a4a4a;"><a style="font-weight: bold; color: #1caad9;"</a>
-            {description}
-            </p>
+            <p style="font-size: 13px; font-weight: normal; margin: 5px; color: #4a4a4a;"><a style="font-weight: bold; color: #1caad9;"</a></p>
+            
+            <p style="font-size: 13px; font-weight: normal; margin: 5px; color: #4a4a4a;">
+            {description}</p>
+            
  
             </div>'''
         TableContentModel = '''

@@ -76,14 +76,14 @@ fields = {'name': [model_name, 'TEXT', False],
           'category': [model_tag, 'TEXT', False],
           }
 
-def CreateFields(fc):
+def CreateFields(fc,fields):
     for field in fields:
         if fields[field][2]:
             arcpy.AddField_management(fc, field, fields[field][1], field_length=fields[field][2])
         else:
             arcpy.AddField_management(fc, field, fields[field][1])
 
-def AddFields(fc):
+def AddFields(fc,fields):
     '''
 
     :param fc: database connection to which fields should be added. For now, fields are a global parameter. This is
@@ -97,23 +97,11 @@ def AddFields(fc):
                 arcpy.AddMessage(f'{field} did not exist and has been created...')
             except arcpy.ExecuteError:
                 arcpy.AddError('Adding and removing fields requires the ArcGIS service to be shut down. Please use '
-                               'ArcMAP to temporarily shut down the server. And do not forget restarting it again...')
+                               'ArcMAP to temporarily shut down the server. And do not forget restarting it again...'
+                                   'P.S.: Please check Error 100 description on SvalDocs, when encountered.')
                 raise
 
-def CreateGeometries(model_html,**kwargs):
-    """Create geometries based on the model file provided or get center coordinates
-       from dialog"""
-
-    if 'fields' in kwargs:
-        fields.update(kwargs['fields'])
-
-    arcpy.AddMessage('Starting to create geometries...')
-
-    classes = {'POINT': {'name': 'virtual_outcrops_point'},
-               'POLYGON': {'name': 'virtual_outcrops_polygon'}
-               }
-
-    # Construct feature classes
+def CheckClasses(classes,fields):
     for fc in classes:
         fc_path = classes[fc]['path'] = os.path.join(gdb, classes[fc]['name'])
 
@@ -122,9 +110,24 @@ def CreateGeometries(model_html,**kwargs):
             arcpy.AddMessage('\nCreating {} feature class...'.format(fc))
             arcpy.CreateFeatureclass_management(gdb, os.path.basename(fc_path), fc,
                                                 spatial_reference=sr_out)
-            CreateFields(fc_path)
+            CreateFields(fc_path,fields)
         else:
-            AddFields(fc_path)
+            AddFields(fc_path,fields) 
+    return classes
+
+def CreateGeometries(model_html,classes,fields,**kwargs):
+    """Create geometries based on the model file provided or get center coordinates
+       from dialog"""
+
+    if 'xtrafields' in kwargs:
+        fields.update(kwargs['xtrafields'])
+
+    arcpy.AddMessage('Starting to create geometries...')
+
+    
+
+    # Construct feature classes
+    classes = CheckClasses(classes,fields)
 
     #     for some reason it wants an editing session, probably because it´s versioned and must be locked
     edit = arcpy.da.Editor(gdb)
@@ -175,11 +178,13 @@ def CreateGeometries(model_html,**kwargs):
             # Create centroid point
             centroid_point = row[1]
 
-            cursor_poly.insertRow(fields_values + [row[0]])
+            poly_row=cursor_poly.insertRow(fields_values + [row[0]])
+            
 
             coords_long = centroid_point[0]
             coords_lat = centroid_point[1]
-            arcpy.AddMessage(centroid_point)
+            
+       
 
 
     elif model_model == "":
@@ -192,16 +197,43 @@ def CreateGeometries(model_html,**kwargs):
         centroid_point = centroid_proj.firstPoint
 
     with arcpy.da.InsertCursor(classes['POINT']['path'], fields_keys + ["SHAPE@"]) as cursor_pnt:
-        cursor_pnt.insertRow(fields_values + [centroid_point])
+        point_row=cursor_pnt.insertRow(fields_values + [centroid_point])
         arcpy.AddMessage('Created centre point.')
+        
+    
+    
+    
+    
+    
+    #CheckClasses(classes,tempfields)
+    
+   # for fc in classes:
+    #    with arcpy.da.UpdateCursor(classes[fc]['path'], ["OID@"] + tempfields_keys) as cursor:
+     #       for row in cursor:
+      #          arcpy.AddMessage(row)
+       #         arcpy.AddMessage(poly_row)
+        #        if row[0] == poly_row:
+         #           cursor.updateRow(tempfields_values)
+    
     edit.stopOperation()
     edit.stopEditing(True)
-    
-    fields['coords_long'][0] = coords_long
-    fields['coords_lat'][0] = coords_lat
 
     return coords_long, coords_lat
 
+def UpdateGeometries(classes,fields, Svalbox_postID):
+    classes=CheckClasses(classes,fields)
+    fields_list = fields.items()
+    fields_keys = [x[0] for x in fields_list]
+    fields_values = [x[1][0] for x in fields_list]
+    
+    
+    for fc in classes:
+        with arcpy.da.UpdateCursor(classes[fc]['path'], ["svalbox_postID"] + fields_keys) as cursor:
+            for row in cursor:
+                if row[0] == Svalbox_postID:
+                    cursor.updateRow([row[0]] + fields_values)
+                
+    
 if __name__ == '__main__':
     model_popup_html = r'<span style="font-size: 1.2 rem; font-weight: bold">No model available!</span>'
     # TODO add proper model popup html
@@ -247,10 +279,17 @@ if __name__ == '__main__':
             'portfolio_category': [22],
             'content':'Updating...'
             }
+    Svalbox_imID=WordPress.imID
     WordPress.create_wordpress_post(post, featured_media=WordPress.imID, publish=False)
+    Svalbox_postID=WordPress.postresponse['id']
     # TODO: cleaner way of getting nice url...
 
-    xtraFields = {'svalbox_postID':[WordPress.postresponse['id'], 'LONG', False],
+
+    classes = {'POINT': {'name': 'virtual_outcrops_point'},
+               'POLYGON': {'name': 'virtual_outcrops_polygon'}
+               }
+    xtraFields = {'svalbox_postID':[Svalbox_postID, 'LONG', False],
+                  'svalbox_imID':[Svalbox_imID, 'LONG', False],
                   'svalbox_url':[WordPress.postresponse['link'], 'TEXT', False],
                   'sketchfab_id':[SketchFab.response['uid'], 'TEXT', False],
                   
@@ -259,7 +298,11 @@ if __name__ == '__main__':
     # TODO: Add all important model IDs to the database dict.
 
     # WordPress.media_params = 'test'
-    coords_long, coords_lat = CreateGeometries(model_popup_html,fields=xtraFields)
+    coords_long, coords_lat = CreateGeometries(model_popup_html,classes=classes,fields=fields,xtrafields=xtraFields)
+
+    tempfields= {'coords_long': [coords_long, 'DOUBLE', False],
+                   'coords_lat': [coords_lat, 'DOUBLE', False]}
+    UpdateGeometries(classes, tempfields,Svalbox_postID)
 
     WordPress.generate_html(
         iframe= SketchFab.embed_modelSimple(SketchFab.response['uid'], 1000, 750),
