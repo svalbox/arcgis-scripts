@@ -3,12 +3,14 @@ import os
 from API.RetrievePasswords import Passwords
 from API.SketchFab import SketchfabClient
 from API.Wordpress import WordpressClient
-#from API.Archive import WordpressClient
+from API.Archive import ArchiveClient as AC
 import sys
 from time import sleep
 
 import numpy as np
 import pandas as pd
+
+from importlib import reload
 
 # Parameters
 ParameterTextList = ['gdb',
@@ -17,6 +19,7 @@ ParameterTextList = ['gdb',
                  'model_locality',
                  'model_img',
                  'model_model',
+                 'folder_photos',
                  'model_upload',
                  'sketchfab_id',
                  'coords_long',
@@ -29,15 +32,18 @@ ParameterTextList = ['gdb',
                  'model_distance2outcrop',
                  'model_images',
                  'model_resolution',
+                 'model_operator',
                  'model_reference',
                  'model_tag',
                  'model_category'
                 ]
 
+Parameters = dict()
 for c,key in enumerate(ParameterTextList):
-    Parameters = {key:arcpy.GetParameterAsText(c)}
+    Parameters[key] = arcpy.GetParameterAsText(c)
     exec(key + " = arcpy.GetParameterAsText(c)")
     
+arcpy.AddMessage(Parameters['model_operator'])
 model_tag_split = model_tag.split(';')
 if len(model_tag_split ) == 1:
     model_tag_split = model_tag_split[0]
@@ -282,6 +288,7 @@ if __name__ == '__main__':
     Svalbox_imID=WordPress.imID
     WordPress.create_wordpress_post(post, featured_media=WordPress.imID, publish=False)
     Svalbox_postID=WordPress.postresponse['id']
+    Sketchfab_ID = SketchFab.response['uid']
     # TODO: cleaner way of getting nice url...
 
 
@@ -291,7 +298,7 @@ if __name__ == '__main__':
     xtraFields = {'svalbox_postID':[Svalbox_postID, 'LONG', False],
                   'svalbox_imID':[Svalbox_imID, 'LONG', False],
                   'svalbox_url':[WordPress.postresponse['link'], 'TEXT', False],
-                  'sketchfab_id':[SketchFab.response['uid'], 'TEXT', False],
+                  'sketchfab_id':[Sketchfab_ID, 'TEXT', False],
                   
                   # 'svalbox_img_url':['test', 'TEXT', False] #TODO
                   }
@@ -327,4 +334,16 @@ if __name__ == '__main__':
     post['content'] = WordPress.html
 
     WordPress.create_wordpress_post(post,featured_media=WordPress.imID,publish=True,update=True)
+    
+    Archive = AC()
+    Archive.createName(parameters=Parameters,id_svalbox=Svalbox_postID)
+    dir_archive = Archive.storeMetadata(folder_photo=Parameters['folder_photos'],
+                          file_model=Parameters['model_model'],
+                          file_description=Parameters['model_desc'],
+                          file_imgoverview=Parameters['model_img'],
+                          id_svalbox=Svalbox_postID,
+                          id_sketchfab=Sketchfab_ID
+        )
+    
+    
     
