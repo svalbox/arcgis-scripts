@@ -36,7 +36,7 @@ class ArchiveClient:
                              'UAV':'U',
                              'Combination':'C',
                              'Other':'O'
-                             } 
+                             }
         
         ## Changing the date formatting
         try:
