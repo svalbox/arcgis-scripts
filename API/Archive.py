@@ -56,7 +56,7 @@ class ArchiveClient:
         
         copy_tree(folder_photo, os.path.join(dir_target,'photos'))
         copyfile(file_model, os.path.join(dir_target,'3Dmodel.'+file_model.split('.')[-1]))
-        copyfile(file_modeltextures, os.path.join(dir_target,'3Dmodeltextures.'+file_model.split('.')[-1]))
+        copyfile(file_modeltextures, os.path.join(dir_target,'3Dmodeltextures.'+file_modeltextures.split('.')[-1]))
         copyfile(file_description, os.path.join(dir_target,'description.'+file_description.split('.')[-1]))
         copyfile(file_imgoverview, os.path.join(dir_target,'image_overview.'+file_imgoverview.split('.')[-1]))
         with open(os.path.join(dir_target,"id.txt"), "w") as text_file:
