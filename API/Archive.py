@@ -50,12 +50,13 @@ class ArchiveClient:
         
         self.name = f'{parameters["model_operator"]}_{id_svalbox}_{date}_{dictionary_region[parameters["model_locality"]]}_{parameters["model_place"].replace(" ", "")}_{parameters["model_name"].replace(" ", "")}_{dictionary_acquisition[parameters["model_acq_type"]]}'
         
-    def storeMetadata(self,folder_photo,file_model,file_description,file_imgoverview,id_svalbox,id_sketchfab):
+    def storeMetadata(self,folder_photo,file_model,file_modeltextures,file_description,file_imgoverview,id_svalbox,id_sketchfab):
         dir_target=os.path.join(self.ArchiveDir,self.name)
         Path(dir_target).mkdir(parents=True, exist_ok=True)
         
         copy_tree(folder_photo, os.path.join(dir_target,'photos'))
         copyfile(file_model, os.path.join(dir_target,'3Dmodel.'+file_model.split('.')[-1]))
+        copyfile(file_modeltextures, os.path.join(dir_target,'3Dmodeltextures.'+file_model.split('.')[-1]))
         copyfile(file_description, os.path.join(dir_target,'description.'+file_description.split('.')[-1]))
         copyfile(file_imgoverview, os.path.join(dir_target,'image_overview.'+file_imgoverview.split('.')[-1]))
         with open(os.path.join(dir_target,"id.txt"), "w") as text_file:
