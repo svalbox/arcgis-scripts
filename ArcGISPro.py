@@ -322,6 +322,7 @@ if __name__ == '__main__':
         description=str(model_description_text),
         model_info={
             'Locality': model_name,
+            'Area': model_place,
             'Region': model_locality,
             'UTM33x/Longitude': round(coords_long,2),
             'UTM33x/Latitude': round(coords_lat,2)  # expand upon this...
@@ -332,8 +333,10 @@ if __name__ == '__main__':
             'Acquisition method': model_acq_type,
             'Processed by': model_proc_by,
             '# images': model_images,
+            'Calibration': model_calibration,
             'Average distance (m)': model_distance2outcrop,
             'Resolution (cm/pix)': model_resolution,
+            'Operator': model_operator,
             'Reference': model_reference})
 
     post['content'] = WordPress.html
