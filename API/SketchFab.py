@@ -75,7 +75,7 @@ class SketchfabClient(object):
         """
         arcpy.AddMessage(f'Embedding SketchFab model {model_uid} into simple HTML iframe')
         html = f'<iframe src=https://sketchfab.com/models/{model_uid}/embed width="{width}" height="{height}" ' \
-            f'frameborder="0"></iframe>'
+            f'frameborder="0" allowfullscreen="allowfullscreen" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>'
         return html
 
 if __name__ == '__main__':
