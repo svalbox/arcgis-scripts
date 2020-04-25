@@ -348,6 +348,7 @@ if __name__ == '__main__':
     WordPress.create_wordpress_post(post,featured_media=WordPress.imID,publish=True,update=True)
     
     Archive = AC()
+    arcpy.AddMessage('Archiving data on the Box')
     Archive.createName(parameters=Parameters,id_svalbox=Svalbox_postID)
     dir_archive = Archive.storeMetadata(folder_photo=Parameters['folder_photos'],
                           file_model=Parameters['model_model'],
@@ -358,7 +359,7 @@ if __name__ == '__main__':
                           id_sketchfab=Sketchfab_ID
         )
     directory_field = {'dir_archive':[dir_archive.split(':')[1], 'TEXT', False]}
-    UpdateDatabaseFields(classes, directory_field.replace('\\','/'),Svalbox_postID)
+    UpdateDatabaseFields(classes, directory_field,Svalbox_postID)
     
     
     
