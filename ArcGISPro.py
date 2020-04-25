@@ -20,6 +20,7 @@ ParameterTextList = ['gdb',
                  'model_img',
                  'model_model',
                  'model_textures',
+                 'model_crs',
                  'folder_photos',
                  'model_upload',
                  'sketchfab_id',
@@ -46,7 +47,6 @@ for c,key in enumerate(ParameterTextList):
     Parameters[key] = arcpy.GetParameterAsText(c)
     exec(key + " = arcpy.GetParameterAsText(c)")
     
-arcpy.AddMessage(Parameters['model_operator'])
 model_tag_split = model_tag.split(';')
 if len(model_tag_split ) == 1:
     model_tag_split = model_tag_split[0]
@@ -60,9 +60,6 @@ arcpy.env.workspace = gdb
 temp_env = os.environ.get('TEMP', 'TMP')
 arcpy.env.overwriteOutput = True  # dangerous, but convenient for TEMP dir
 
-# SRID
-sr_in = arcpy.SpatialReference(4326)
-sr_out = arcpy.SpatialReference(32633)
 
 model_description_text = open(model_desc).read()
 
@@ -86,6 +83,13 @@ fields = {'name': [model_name, 'TEXT', False],
           'tags': [model_tag, 'TEXT', False],
           'category': [model_tag, 'TEXT', False],
           }
+
+# SRID
+sr_out = arcpy.SpatialReference(32633)
+
+sr_in = arcpy.SpatialReference()
+sr_in.loadFromString(model_crs)
+arcpy.AddMessage(f'Configuration has been loaded, model crs = {sr_in}.')
 
 def CreateFields(fc,fields):
     for field in fields:
@@ -353,6 +357,8 @@ if __name__ == '__main__':
                           id_svalbox=Svalbox_postID,
                           id_sketchfab=Sketchfab_ID
         )
+    directory_field = {'dir_archive':[dir_archive.split(':')[1], 'TEXT', False]}
+    UpdateDatabaseFields(classes, directory_field.replace('\\','/'),Svalbox_postID)
     
     
     
