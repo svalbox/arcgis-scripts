@@ -4,8 +4,15 @@ from time import sleep
 
 import numpy as np
 import pandas as pd
+import arcpy
 
 from importlib import reload
+import logging
+logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+logger = logging.getLogger()
+logger.info('Started.')
+
+sr_out = arcpy.SpatialReference(32633)
 
 def CreateFields(fc,fields):
     for field in fields:
@@ -46,20 +53,22 @@ def CheckClasses(classes,fields):
             AddFields(fc_path,fields)
     return classes
 
-def CreateGeometries(model_html,classes,fields,**kwargs):
+def CreateGeometries(config,classes,fields,**kwargs):
     """Create geometries based on the model file provided or get center coordinates
        from dialog"""
 
+
+    # Before this step, all fields need to be put into their available dict structure
+    # otherwise there will be an issue with the continuation of the script
     if 'xtrafields' in kwargs:
         fields.update(kwargs['xtrafields'])
-
-    sr_out = arcpy.SpatialReference(32633)
 
     arcpy.AddMessage('Starting to create geometries...')
 
 
 
     # Construct feature classes
+    
     classes = CheckClasses(classes,fields)
 
     #     for some reason it wants an editing session, probably because it´s versioned and must be locked
@@ -67,39 +76,42 @@ def CreateGeometries(model_html,classes,fields,**kwargs):
     edit.startEditing(True, False)
     edit.startOperation()
 
-    # Update urls for PDF and image, html for popup
-    # fields['svalbox_url'][0] = posturl
-    # fields['url_pdf'][0] = media_params['Image']['url'] # TODO : make sure whether to really implement 3D pdfs...
-    fields['popup_html'][0] = model_html
     fields_list = fields.items()
     fields_keys = [x[0] for x in fields_list]
     fields_values = [x[1][0] for x in fields_list]
 
-    if not model_model == "":
+    if not config['data']['model_file'] == "":
+        logger.info('Opening model')
         arcpy.AddMessage('Model was specified.\nAttempting to fetch coordinates for footprint and centroid...')
         model_path = os.path.join('in_memory', '3D')
         footprint_path = os.path.join('in_memory', 'footprint')
-        footprint_proj_path = os.path.join(temp_env, 'simple.shp')  # Env for Project can't be in_memory
+        footprint_proj_path = os.path.join(config['temp_env'], 'simple.shp')  # Env for Project can't be in_memory
         simplify_path = os.path.join('in_memory', 'simple')
 
         # Import 3D file
-        arcpy.Import3DFiles_3d(in_files=model_model,
+        logger.info('Importing 3D model')
+        arcpy.Import3DFiles_3d(in_files=os.path.join(
+                                    config['data']['package_directory'],
+                                    config['data']['model_file']),
                                out_featureClass=model_path,
-                               spatial_reference=sr_in,
+                               spatial_reference=config['data']['model_crs'],
                                )
 
         # Convert to footprint and project to WGS84UTM33N
+        logger.info('Calculating footprints')
         arcpy.AddMessage('Model imported. Getting footprint...')
         arcpy.MultiPatchFootprint_3d(in_feature_class=model_path,
                                      out_feature_class=footprint_path)
 
         arcpy.AddMessage('Footprint calculated. Projecting...')
+        logger.info('Projecting...')
         arcpy.Project_management(in_dataset=footprint_path,
                                  out_dataset=footprint_proj_path,
                                  out_coor_system=sr_out,
                                  )
 
         arcpy.AddMessage('Projected. Simplifying...')
+        logger.info('Projected. Simplifying...')
         arcpy.SimplifyPolygon_cartography(in_features=footprint_proj_path,
                                           out_feature_class=simplify_path,
                                           algorithm='POINT_REMOVE',
@@ -107,9 +119,12 @@ def CreateGeometries(model_html,classes,fields,**kwargs):
 
         cursor_poly = arcpy.da.InsertCursor(classes['POLYGON']['path'], fields_keys + ["SHAPE@"])
         arcpy.AddMessage('Created Simplified Polygon.')
+        logger.info('Created Simplified Polygon.')
         for row in arcpy.da.SearchCursor(simplify_path, ['SHAPE@', 'SHAPE@XY']):
             # Create centroid point
             centroid_point = row[1]
+            logger.info(fields_keys)
+            logger.debug(row)
 
             poly_row=cursor_poly.insertRow(fields_values + [row[0]])
 
@@ -120,33 +135,24 @@ def CreateGeometries(model_html,classes,fields,**kwargs):
 
 
 
-    elif model_model == "":
+    elif (config['model_file'] == "" 
+          and not config['data']['model_long'] == "" 
+          and not config['data']['model_lat'] != ""):
         #
         arcpy.AddMessage('No model.\nTaking coordinates from dialog...')
-        centroid_coords = arcpy.Point(coords_long, coords_lat)
+        centroid_coords = arcpy.Point(config['data']['coords_long'], config['data']['coords_lat'])
 
-        centroid_geom = arcpy.PointGeometry(centroid_coords, sr_in)
+        centroid_geom = arcpy.PointGeometry(centroid_coords, config['data']['model_crs'])
         centroid_proj = centroid_geom.projectAs(sr_out)
         centroid_point = centroid_proj.firstPoint
+        
+    else:
+        raise ValueError('No spatial data/coordinates provided.')
 
     with arcpy.da.InsertCursor(classes['POINT']['path'], fields_keys + ["SHAPE@"]) as cursor_pnt:
         point_row=cursor_pnt.insertRow(fields_values + [centroid_point])
         arcpy.AddMessage('Created centre point.')
 
-
-
-
-
-
-    #CheckClasses(classes,tempfields)
-
-   # for fc in classes:
-    #    with arcpy.da.UpdateCursor(classes[fc]['path'], ["OID@"] + tempfields_keys) as cursor:
-     #       for row in cursor:
-      #          arcpy.AddMessage(row)
-       #         arcpy.AddMessage(poly_row)
-        #        if row[0] == poly_row:
-         #           cursor.updateRow(tempfields_values)
 
     edit.stopOperation()
     edit.stopEditing(True)
