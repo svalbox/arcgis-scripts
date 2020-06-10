@@ -26,7 +26,7 @@ def import_model_and_upload_to_wordpress(cfg,**kwargs):
     """
     SketchFab = SketchfabClient()
     WordPress = WordpressClient()
-    Archive = AC()
+    Archive = AC(archivedir = "C:/test")
     
     """
     Input standardisation 
@@ -42,11 +42,11 @@ def import_model_and_upload_to_wordpress(cfg,**kwargs):
         
     try: # fixing the acquisition date into a changable format
         cfg['metadata']['acquisition_date'] = \
-            datetime.datetime.strptime(
-                cfg['metadata']['acquisition_date'], '%d.%m.%Y %H:%M:%S')
+            try_parsing_date(cfg['metadata']['acquisition_date']) 
     except:
         cfg['metadata']['acquisition_date'] = \
-            try_parsing_date(cfg['metadata']['acquisition_date']) 
+            datetime.datetime.strptime(
+                cfg['metadata']['acquisition_date'], '%d.%m.%Y %H:%M:%S')
     
     
     
@@ -58,8 +58,8 @@ def import_model_and_upload_to_wordpress(cfg,**kwargs):
         cfg['metadata']['description_text'] = file.read().replace('\n', '')
     
     
-    if 'epsg_code' in kwargs: # embedding ArcGIS SpatialReference instead of EPSG code
-        sr_in = arcpy.SpatialReference(kwargs['epsg_code'])
+    if type(cfg['data']['model_crs']) is int: # embedding ArcGIS SpatialReference instead of EPSG code
+        sr_in = arcpy.SpatialReference(cfg['data']['model_crs'])
     elif cfg['data']['model_crs']:
         sr_in = arcpy.SpatialReference()
         sr_in.loadFromString(cfg['data']['model_crs'])
@@ -273,8 +273,8 @@ if __name__ == '__main__':
     values of the empty configuration dictionary.
     """
     
-    sys.path.insert(1,os.environ["HOMEDRIVE"]+os.environ["HOMEPATH"]+'/Documents/Github/Jupyter Notebooks/Metashape')
-    import read_yaml as ryaml
+    #sys.path.insert(1,os.environ["HOMEDRIVE"]+os.environ["HOMEPATH"]+'/Documents/Github/Jupyter Notebooks/Metashape')
+    #import read_yaml as ryaml
     
     # Parameters
     ParameterTextList = ['gdb',
@@ -310,24 +310,47 @@ if __name__ == '__main__':
     for c,key in enumerate(ParameterTextList):
         Parameters[key] = arcpy.GetParameterAsText(c)
         exec(key + " = arcpy.GetParameterAsText(c)")
+     
+    try:    
+        cfg = ryaml.read_yaml("empty_config.yml")
+    except:
+        cfg = {}
+        cfg['model'] = {}
+        cfg['data'] = {}
+        cfg['metadata'] = {}
         
-    cfg = ryaml.read_yaml("empty_config.yml")
     cfg['geodatabase'] = gdb
+    
+    cfg['model'] = {}
     cfg['model']['name'] = model_name
     cfg['model']['place'] = model_place
     cfg['model']['region'] = model_locality
-    cfg['data']['package_directory'] = model_image.split('/')
-
-    # Workspace settings
-    arcpy.env.workspace = gdb
-    temp_env = os.environ.get('TEMP', 'TMP')
-    arcpy.env.overwriteOutput = True  # dangerous, but convenient for TEMP dir
-
-    model_description_text = open(model_desc).read()
-
-
-
-    # SRID
-
+    
+    cfg['data']['package_directory'] = os.path.dirname(model_img)
+    cfg['data']['overview_img'] = os.path.basename(model_img)
+    cfg['data']['model_file'] = os.path.basename(model_model)
+    cfg['data']['texture_zip'] = os.path.basename(model_textures)
+    cfg['data']['data_subdirectory'] = os.path.basename(folder_photos)
+    cfg['data']['model_crs'] = model_crs
+    cfg['data']['sketchfab_upload_package'] = model_upload
+    cfg['data']['model_long'] = coords_long
+    cfg['data']['model_lat'] = coords_lat
+    cfg['data']['description_file'] = os.path.basename(model_desc)
+    
+    cfg['metadata']['acquisition_date'] = model_date
+    cfg['metadata']['acquisition_type'] = model_acq_type
+    cfg['metadata']['acquisition_user'] = model_acq_by
+    cfg['metadata']['operator'] = model_operator
+    cfg['metadata']['acquisition_distance2outcrop'] = model_distance2outcrop
+    cfg['metadata']['processing_user'] = model_proc_by
+    cfg['metadata']['processing_images'] = model_images
+    cfg['metadata']['processing_calibration'] = model_calibration
+    cfg['metadata']['processing_resolution'] = model_resolution
+    cfg['metadata']['processing_quality'] = model_quality
+    cfg['metadata']['sketchfab_id'] = sketchfab_id
+    cfg['metadata']['reference'] = model_reference
+    cfg['metadata']['tag'] = model_tag
+    cfg['metadata']['category'] = model_category
+    
+    arcpy.AddMessage(f'Configuration has been loaded into the configuration dictionary.\n{cfg}')
     import_model_and_upload_to_wordpress(cfg)
-    arcpy.AddMessage(f'Configuration has been loaded, model crs = {sr_in}.')
