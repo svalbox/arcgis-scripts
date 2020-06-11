@@ -18,7 +18,7 @@ class ArchiveClient:
     def __init__(self,archivedir='Z:/VOM-DB'):
         self.ArchiveDir = archivedir
         
-    def createName(self,parameters,id_svalbox):
+    def createName(self,cfg,id_svalbox):
         dictionary_region = {'Spitsbergen':'Spit',
                              'Hopen':'Hope',
                              'Kong Karls Land':'Kong',
@@ -39,16 +39,13 @@ class ArchiveClient:
                              }
         
         ## Changing the date formatting
-        try:
-            date = dt.datetime.strptime(parameters["model_date"], '%d.%m.%Y %H:%M:%S')
-        except ValueError:
-            try:
-                date = dt.datetime.strptime(parameters["model_date"], '%d.%m.%Y')
-            except:
-                raise
-        date = date.strftime("%Y%m%d")
+        if isinstance(cfg['metadata']['acquisition_date'],dt.datetime):
+            date = dt.datetime.strftime(cfg['metadata']['acquisition_date'],"%Y%m%d")
+        else:
+            raise TypeError
         
-        self.name = f'{parameters["model_operator"]}_{id_svalbox}_{date}_{dictionary_region[parameters["model_locality"]]}_{parameters["model_place"].replace(" ", "")}_{parameters["model_name"].replace(" ", "")}_{dictionary_acquisition[parameters["model_acq_type"]]}'
+        self.name = f'{cfg["metadata"]["operator"]}_{cfg["metadata"]["svalbox_post_id"]}_{date}_{dictionary_region[cfg["model"]["region"]]}_{cfg["model"]["place"].replace(" ", "")}_{cfg["model"]["name"].replace(" ", "")}_{dictionary_acquisition[cfg["metadata"]["acquisition_type"]]}'
+
         
     def storeMetadata(self,folder_photo,file_model,file_modeltextures,file_description,file_imgoverview,id_svalbox,id_sketchfab):
         dir_target=os.path.join(self.ArchiveDir,self.name)

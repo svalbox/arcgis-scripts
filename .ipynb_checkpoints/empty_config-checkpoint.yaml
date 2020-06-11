@@ -1,0 +1,39 @@
+# This is an example yaml configuration for a metashape run
+
+#### Project-level parameters:
+
+# ArcGIS geodabase file to load - make sure to include absolute file paths:
+geodatabase: # FILEDIR (absolute)
+
+model:
+    name: # STRING
+    place: # STRING
+    region:  # PICK: Hopen / Spitsbergen / Kong Karls Land / Edgeøya / Barentsøya / Tusenøyane / Nordaustlandet / Kvitøya / Prins Karls Forland / Bjørnøya / Other 
+    
+data:
+    package_directory: # FOLDER DIR (absolute)
+    data_subdirectory: # DATA FOLDER DIR (relative to package_direcory)
+    overview_img: # FILE DIR (relative to package_directory)
+    texture_zip: # ZIP FILE DIR (relative to package_direcory)
+    model_file: # MODEL FILE NAME (relative to package_direcory)
+    model_crs:  # INT EPSG number of model CRS
+    sketchfab_upload_package: # OPTIONAL - ZIP DIR (relative to package_directory)
+    model_long:  # OPTIONAL - FLOAT longitude of model centroid point (in CRS)
+    model_lat:  # OPTIONAL - FLOAT latitude of model centroid point (in CRS)
+    description_file: "" # TXT FILE DIR (relative to package directory)
+    
+metadata:
+    acquisition_date: # STRING DD.MM.YYYY
+    acquisition_type: # PICK Boat / UAV / Handheld / Combination
+    acquisition_user: # STRING Data collector
+    operator: # STRING Project owner
+    acquisition_distance2outcrop: # FLOAT, distance to outcrop
+    processing_user: # STRING in charge of processing
+    processing_images: # INT number of images used for the model
+    processing_calibration: # PICK: Built-in (GPS) / Marker (GPS) / Marker (dGPS) / None
+    processing_resolution: # FLOAT resolution in cm/pixel
+    processing_quality: # PICK bad / average / good / excellent / None
+    sketchfab_id: # STRING sketchfab ID
+    reference: # STRING contact information/person in charge
+    tag: # STRING, item separator: ;
+    category: # STRING, item separator: ;
