@@ -44,14 +44,16 @@ class ArchiveClient:
         else:
             raise TypeError
         
-        self.name = f'{cfg["metadata"]["operator"]}_{cfg["metadata"]["svalbox_post_id"]}_{cfg["metadata"]["acquisition_date"]}_{dictionary_region[cfg["metadata"]["region"]]}_{cfg["model"]["place"].replace(" ", "")}_{cfg["model"]["name"].replace(" ", "")}_{dictionary_acquisition[cfg["metadata"]["acquisition_type"]]}'
+        self.name = f'{cfg["metadata"]["operator"]}_{cfg["metadata"]["svalbox_post_id"]}_{cfg["metadata"]["acquisition_date"]}_{dictionary_region[cfg["model"]["region"]]}_{cfg["model"]["place"].replace(" ", "")}_{cfg["model"]["name"].replace(" ", "")}_{dictionary_acquisition[cfg["metadata"]["acquisition_type"]]}'
         
-    def storeMetadata(self,folder_photo,file_model,file_description,file_imgoverview,id_svalbox,id_sketchfab):
+    def storeMetadata(self,folder_photo,file_model,file_modeltextures,file_description,file_imgoverview,id_svalbox,id_sketchfab):
         dir_target=os.path.join(self.ArchiveDir,self.name)
+        dir_target = dir_target.replace('\\','/')
         Path(dir_target).mkdir(parents=True, exist_ok=True)
         
-        copy_tree(folder_photo, os.path.join(dir_target,'photos'))
-        copyfile(file_model, os.path.join(dir_target,'3Dmodel.'+file_model.split('.')[-1]))
+        copy_tree(folder_photo, os.path.join(dir_target,'Data'))
+        copyfile(file_model, os.path.join(dir_target,file_model.split('\\')[-1]))
+        copyfile(file_modeltextures, os.path.join(dir_target,file_model.split('\\')[-1]+'.'+file_modeltextures.split('.')[-1]))
         copyfile(file_description, os.path.join(dir_target,'description.'+file_description.split('.')[-1]))
         copyfile(file_imgoverview, os.path.join(dir_target,'image_overview.'+file_imgoverview.split('.')[-1]))
         with open(os.path.join(dir_target,"id.txt"), "w") as text_file:

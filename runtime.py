@@ -26,7 +26,7 @@ def import_model_and_upload_to_wordpress(cfg,**kwargs):
     """
     SketchFab = SketchfabClient()
     WordPress = WordpressClient()
-    Archive = AC(archivedir = "C:/test")
+    Archive = AC()
     
     """
     Input standardisation 
@@ -238,7 +238,7 @@ def import_model_and_upload_to_wordpress(cfg,**kwargs):
     Archiving data onto the Svalbox
     """
     arcpy.AddMessage('Archiving data on the Box')
-    Archive.createName(parameters=cfg,id_svalbox=cfg['metadata']['svalbox_post_id'])
+    Archive.createName(cfg=cfg,id_svalbox=cfg['metadata']['svalbox_post_id'])
     dir_archive = Archive.storeMetadata(
         folder_photo=os.path.join(
             cfg['data']['package_directory'],
