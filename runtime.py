@@ -206,6 +206,11 @@ def import_model_and_upload_to_wordpress(cfg,**kwargs):
     """
     Updating the Wordpress post with the correct information
     """
+    if isinstance(cfg['metadata']['acquisition_date'],dt.datetime):
+        date = datetime.strftime(cfg['metadata']['acquisition_date'],"%Y%m%d")
+    else:
+        raise TypeError
+    
     WordPress.generate_html(
         iframe= SketchFab.embed_modelSimple(SketchFab.response['uid'], 1000, 750),
         modelname=cfg['model']['name'],
@@ -219,7 +224,7 @@ def import_model_and_upload_to_wordpress(cfg,**kwargs):
             'Spatial reference': 'epsg:32633'#+str(cfg['metadata']['epsg']), # expand upon this...
         },
         model_specs={
-            'Date acquired': cfg['metadata']['acquisition_date'],
+            'Date acquired': date,
             'Acquired by': cfg['model']['name'],
             'Acquisition method': cfg['metadata']['acquisition_type'],
             'Processed by': cfg['metadata']['processing_user'],
@@ -231,7 +236,6 @@ def import_model_and_upload_to_wordpress(cfg,**kwargs):
             'Reference': cfg['metadata']['reference']})
 
     post['content'] = WordPress.html
-
     WordPress.create_wordpress_post(post,featured_media=WordPress.imID,publish=True,update=True)
 
     """
