@@ -216,7 +216,7 @@ def import_model_and_upload_to_wordpress(cfg,**kwargs):
             'Region': cfg['model']['region'],
             'Northing/Longitude': round(cfg['data']['model_long'],2),
             'Easting/Latitude': round(cfg['data']['model_lat'],2),
-            'Spatial reference': 'epsg:'+str(cfg['data']['model_crs']), # expand upon this...
+            'Spatial reference': 'epsg:32633'#+str(cfg['metadata']['epsg']), # expand upon this...
         },
         model_specs={
             'Date acquired': cfg['metadata']['acquisition_date'],
