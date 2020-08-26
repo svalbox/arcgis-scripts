@@ -45,7 +45,7 @@ def import_model_and_upload_to_wordpress(cfg,**kwargs):
             try_parsing_date(cfg['metadata']['acquisition_date']) 
     except:
         cfg['metadata']['acquisition_date'] = \
-            datetime.datetime.strptime(
+            datetime.strptime(
                 cfg['metadata']['acquisition_date'], '%d.%m.%Y %H:%M:%S')
     
     
@@ -206,7 +206,7 @@ def import_model_and_upload_to_wordpress(cfg,**kwargs):
     """
     Updating the Wordpress post with the correct information
     """
-    if isinstance(cfg['metadata']['acquisition_date'],dt.datetime):
+    if isinstance(cfg['metadata']['acquisition_date'],datetime):
         date = datetime.strftime(cfg['metadata']['acquisition_date'],"%Y%m%d")
     else:
         raise TypeError
