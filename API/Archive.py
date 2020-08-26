@@ -7,7 +7,7 @@ Created on Mon Jan 20 12:25:25 2020
 
 import os
 import sys
-import datetime as dt
+from datetime import datetime
 import pandas as pd
 import numpy as np
 from distutils.dir_util import copy_tree
@@ -39,8 +39,8 @@ class ArchiveClient:
                              }
         
         ## Changing the date formatting
-        if isinstance(cfg['metadata']['acquisition_date'],dt.datetime):
-            date = dt.datetime.strftime(cfg['metadata']['acquisition_date'],"%Y%m%d")
+        if isinstance(cfg['metadata']['acquisition_date'],datetime):
+            date = datetime.strftime(cfg['metadata']['acquisition_date'],"%Y%m%d")
         else:
             raise TypeError
         
