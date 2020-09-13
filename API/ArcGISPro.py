@@ -73,8 +73,11 @@ def CreateGeometries(config,classes,fields,**kwargs):
 
     #     for some reason it wants an editing session, probably because it´s versioned and must be locked
     edit = arcpy.da.Editor(arcpy.env.workspace)
-    edit.startEditing(True, False)
-    edit.startOperation()
+    try:
+        edit.startEditing(True, False)
+        edit.startOperation()
+    except:
+        pass
 
     fields_list = fields.items()
     fields_keys = [x[0] for x in fields_list]
@@ -117,22 +120,23 @@ def CreateGeometries(config,classes,fields,**kwargs):
                                           algorithm='POINT_REMOVE',
                                           tolerance=10)
 
-        cursor_poly = arcpy.da.InsertCursor(classes['POLYGON']['path'], fields_keys + ["SHAPE@"])
-        arcpy.AddMessage('Created Simplified Polygon.')
-        logger.info('Created Simplified Polygon.')
-        for row in arcpy.da.SearchCursor(simplify_path, ['SHAPE@', 'SHAPE@XY']):
-            # Create centroid point
-            centroid_point = row[1]
-            logger.info(fields_keys)
-            logger.debug(row)
-
-            poly_row=cursor_poly.insertRow(fields_values + [row[0]])
-
-
-            coords_long = centroid_point[0]
-            coords_lat = centroid_point[1]
-
-
+        with arcpy.da.InsertCursor(classes['POLYGON']['path'], fields_keys + ["SHAPE@"]) as cursor_poly:
+            arcpy.AddMessage('Created Simplified Polygon.')
+            logger.info('Created Simplified Polygon.')
+            with arcpy.da.SearchCursor(simplify_path, ['SHAPE@', 'SHAPE@XY']) as cursor_search:
+                for row in cursor_search:
+                    # Create centroid point
+                    centroid_point = row[1]
+                    logger.info(fields_keys)
+                    logger.info(row)
+        
+                    poly_row=cursor_poly.insertRow(fields_values + [row[0]])
+        
+        
+                    coords_long = centroid_point[0]
+                    coords_lat = centroid_point[1]
+    
+    
 
 
     elif (config['model_file'] == "" 
@@ -153,9 +157,11 @@ def CreateGeometries(config,classes,fields,**kwargs):
         point_row=cursor_pnt.insertRow(fields_values + [centroid_point])
         arcpy.AddMessage('Created centre point.')
 
-
-    edit.stopOperation()
-    edit.stopEditing(True)
+    try:
+        edit.stopOperation()
+        edit.stopEditing(True)
+    except:
+        pass
 
     return coords_long, coords_lat
 
