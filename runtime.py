@@ -1,4 +1,8 @@
-import arcpy
+try:
+    import arcpy
+except:
+    from Archook import archook
+    archook.get_arcpy(pro=True)
 import os
 from API.RetrievePasswords import Passwords
 from API.SketchFab import SketchfabClient
