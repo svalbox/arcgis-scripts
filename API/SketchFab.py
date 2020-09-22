@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import arcpy
 import requests
+import json
 from time import sleep
 from API.RetrievePasswords import Passwords
 
@@ -77,6 +78,19 @@ class SketchfabClient(object):
         html = f'<iframe src=https://sketchfab.com/models/{model_uid}/embed width="{width}" height="{height}" ' \
             f'frameborder="0" allowfullscreen="allowfullscreen" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>'
         return html
+    
+    def update_model(self, model_uid, data):
+        """
+        PATCH the model endpoint to update its name, description ...
+        """
+    
+        data = {'name': 'A super Bob model'}
+        try:
+           response = requests.patch(self._base_url + f'/models/{model_uid}',
+                                 data=data,
+                                 headers=self._headers)
+        except requests.exceptions.RequestException as e:
+             print('Try failed with error {}'.format(e))
 
 if __name__ == '__main__':
     A = SketchfabClient()
