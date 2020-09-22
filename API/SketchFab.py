@@ -84,7 +84,9 @@ class SketchfabClient(object):
         PATCH the model endpoint to update its name, description ...
         """
     
-        data = {'name': 'A super Bob model'}
+        data = {'name': 'DH4-487.5'#,
+                #'description': ''
+                }
         try:
            response = requests.patch(self._base_url + f'/models/{model_uid}',
                                  data=data,
