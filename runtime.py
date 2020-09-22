@@ -9,6 +9,7 @@ from API.SketchFab import SketchfabClient
 from API.Wordpress import WordpressClient
 from API.Archive import ArchiveClient as AC
 import API.ArcGISPro as AGP
+from API.common import try_parsing_date
 import sys
 from time import sleep
 
@@ -34,16 +35,7 @@ def import_model_and_upload_to_wordpress(cfg,**kwargs):
     
     """
     Input standardisation 
-    """
-    
-    def try_parsing_date(text):
-        for fmt in ('%Y-%m-%d', '%d.%m.%Y', '%d/%m/%Y'):
-            try:
-                return datetime.strptime(text, fmt)
-            except ValueError:
-                pass
-        raise ValueError('no valid date format found')
-        
+    """      
     try: # fixing the acquisition date into a changable format
         cfg['metadata']['acquisition_date'] = \
             try_parsing_date(cfg['metadata']['acquisition_date']) 

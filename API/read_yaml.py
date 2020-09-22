@@ -14,23 +14,7 @@ import os
 # import specialised libs
 import yaml
 import pathlib
-try:
-    import Metashape
-except:
-    print("Unable to load Metashape libraries.")
-    pass
-
-try:
-    from cv2 import aruco
-except:
-    print("Unable to load OpenCV2 aruco libraries.")
-    pass
-
-"""
-Based on UCDavis work, see https://github.com/ucdavis/metashape,
-Part below based on https://stackoverflow.com/a/25896596/237354
-
-"""
+from API.common import try_parsing_date
 
 def convert_paths_and_commands(a_dict):
     for k, v in a_dict.items():
@@ -38,10 +22,16 @@ def convert_paths_and_commands(a_dict):
             if isinstance(v, str):
                 if v and ('path' in k):    # all paths that are supplied in the config file are automatically converted to Path type
                     a_dict[k] = pathlib.Path(v)
-                elif v and ('Metashape' in v or 'aruco' in v) and not ('path' in k) and not ('project' in k): # for Metashape compatibility
-                    a_dict[k] = eval(v)
+                elif v and ('date' in k):
+                    a_dict[k] = try_parsing_date(v)
+            elif isinstance(v, int):
+                if v and ('date' in k):
+                    a_dict[k] = try_parsing_date(str(v))
             elif isinstance(v, list):
-                a_dict[k] =  [eval(item) for item in v if("Metashape" in item)]
+                if len(v) > 1:
+                    a_dict[k] = ', '.join(str(item) for item in v)
+                else:
+                    a_dict[k] = str(v[0])
         else:
             a_dict[k] = convert_paths_and_commands(v)
     return a_dict

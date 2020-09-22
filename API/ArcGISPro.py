@@ -1,6 +1,7 @@
 import os
 import sys
 from time import sleep
+import datetime
 
 import numpy as np
 import pandas as pd
@@ -38,6 +39,39 @@ def AddFields(fc,fields):
                                'ArcMAP to temporarily shut down the server. And do not forget restarting it again...'
                                    'P.S.: Please check Error 100 description on SvalDocs, when encountered.')
                 raise
+                
+def create_fields_from_config(fc,a_dict):
+    for k, v in a_dict.items():
+        if not isinstance(v, dict):
+            if not k in ['geodatabase','temp_env']:
+                lstFields = [i.name for i in arcpy.ListFields(fc['path'])]
+                if not k in lstFields:
+                    if isinstance(v, str):
+                        if v and ('description' in k or 'comment' in k):
+                             arcpy.AddField_management(fc['path'], k, 'TEXT', field_length=5000)
+                        else:
+                             arcpy.AddField_management(fc['path'], k, 'TEXT', field_length=100)
+                    elif isinstance(v, datetime.date):
+                        arcpy.AddField_management(fc['path'], k, 'DATE')
+                    elif isinstance(v, int):
+                        arcpy.AddField_management(fc['path'], k, 'LONG')
+                    elif isinstance(v, float):
+                        arcpy.AddField_management(fc['path'], k, 'DOUBLE')
+        else:
+            pass
+            #create_fields_from_config(fc, v)
+    
+    
+def check_classes_v2(classes):
+    for fc in classes:
+        fc_path = classes[fc]['path'] = os.path.join(arcpy.env.workspace, classes[fc]['name'])
+
+        # Check if feature classes exist
+        if not arcpy.Exists(classes[fc]['path']):
+            arcpy.AddMessage('\nCreating {} feature class...'.format(fc))
+            arcpy.CreateFeatureclass_management(arcpy.env.workspace, os.path.basename(fc_path), fc,
+                                                spatial_reference=sr_out)
+    return classes
 
 def CheckClasses(classes,fields):
     for fc in classes:
@@ -164,6 +198,89 @@ def CreateGeometries(config,classes,fields,**kwargs):
         pass
 
     return coords_long, coords_lat
+
+def StoreProjectCampaign(cfg,**kwargs):
+    arcpy.env.workspace = cfg['geodatabase']
+    cfg['temp_env'] = os.environ.get('TEMP', 'TMP')
+    arcpy.env.overwriteOutput = True
+    
+    classes = {'POINT': {'name': 'points'},
+               'POLYGON': {'name': 'polygons'}
+               }
+    
+    classes = check_classes_v2(classes)
+    
+    try:
+        latest = arcpy.da.SearchCursor(
+            classes['POINT']['path'], 
+            ["campaign_identifier"], 
+            f"campaign_identifier LIKE '{datetime.date.today().year}-%'", 
+            sql_clause = (None, "ORDER BY campaign_identifier DESC")
+            ).next()[0]
+        if int(latest.split('-')[0]) == cfg['start_date'].year:
+                    dbID_no = str(int(latest.split('-')[1]) + 1).zfill(4)
+        else: 
+            raise
+    except:
+        dbID_no = "1".zfill(4)
+    
+    cfg['campaign_identifier'] = \
+        f"{cfg['campaign_start_date'].year}-{dbID_no}"
+    for key in classes:
+        create_fields_from_config(classes[key],cfg)
+        
+    field_keys = [i.name for i in arcpy.ListFields(classes[key]['path']) if i.name in cfg]
+    field_values = [cfg[i.name] for i in arcpy.ListFields(classes[key]['path']) if i.name in cfg]
+    for key in classes:
+        
+        with arcpy.da.InsertCursor(classes[key]['path'], field_keys) as cursor_pnt:
+            point_row=cursor_pnt.insertRow(field_values)
+            
+def StoreSample(cfg,**kwargs):
+    arcpy.env.workspace = cfg['geodatabase']
+    cfg['temp_env'] = os.environ.get('TEMP', 'TMP')
+    arcpy.env.overwriteOutput = True
+    
+    classes = {'POINT': {'name': 'Handsamples'},
+               }
+    classes = check_classes_v2(classes)
+    
+    try:
+        latest = arcpy.da.SearchCursor(
+            classes['POINT']['path'], 
+            ["sample_identifier"], 
+            f"sample_identifier LIKE '{datetime.date.today().year}-%'", 
+            sql_clause = (None, "ORDER BY sample_identifier DESC")
+            ).next()[0]
+        if int(latest.split('-')[0]) == cfg['sampling_date'].year:
+                    dbID_no = str(int(latest.split('-')[1]) + 1).zfill(4)
+        else: 
+            raise
+    except:
+        dbID_no = "1".zfill(4)
+    
+    cfg['sample_identifier'] = \
+        f"{cfg['sampling_date'].year}-{dbID_no}"
+        
+    cfg['sample_name'] = 
+        
+    del cfg['data_path']
+        
+    centroid_coords = arcpy.Point(cfg['sampling_longitude_wgs84'], cfg['sampling_latitude_wgs84'])
+    centroid_geom = arcpy.PointGeometry(centroid_coords, arcpy.SpatialReference(4326))
+    centroid_proj = centroid_geom.projectAs(sr_out)
+    centroid_point = centroid_proj.firstPoint
+        
+    for key in classes:
+        create_fields_from_config(classes[key],cfg)
+        
+    field_keys = [i.name for i in arcpy.ListFields(classes[key]['path']) if i.name in cfg]
+    field_values = [cfg[i.name] for i in arcpy.ListFields(classes[key]['path']) if i.name in cfg]
+    
+    for key in classes:
+        with arcpy.da.InsertCursor(classes[key]['path'], field_keys + ["SHAPE@"]) as cursor_pnt:
+            point_row=cursor_pnt.insertRow(field_values + [centroid_point])
+    
 
 def UpdateDatabaseFields(classes,fields, Svalbox_postID):
     classes=CheckClasses(classes,fields)
