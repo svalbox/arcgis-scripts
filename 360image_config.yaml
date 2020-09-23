@@ -1,0 +1,22 @@
+# This is an example yaml configuration for the archiving of a digitised rock/handsample.
+# The name is automatically generated as a function of locality + 360img_ID
+
+# ArcGIS geodabase file to load - make sure to include absolute file paths and point it to the geodatabase with db_writer/handsample files:
+geodatabase: C:\Users\Peter\Documents\ArcGIS\Projects\MyProject2\svalbox.sde # FILEDIR (absolute)
+
+# Sampling data
+image_acquisition_date: 20200501 #YYYYMMDD
+image_contact: Peter # Person who sampled it
+image_longitude_wgs84: 18.30 # DD.decimals in WGS84
+image_latitude_wgs84: 78.1 # DD.decimals in WGS84
+image_altitude: 234 # in metres
+image_locality: Tempelfjorden
+image_area: Nordenskioldland
+image_region: Spitsbergen
+
+# remaining metadata:
+unis_project_no: 9272651
+unis_project_campaign: # Same as in the project_config_setting
+owner: Peter Betlem
+data_path: C:\Server\PhD\Svalbox\Map\360img_2020-0001.JPG
+comment: For testing purposes only.

@@ -12,7 +12,7 @@
 ## Project-level parameters:
 
 # ArcGIS geodabase file to load - make sure to include absolute file paths and have it point to the geodatabase connection linked with the appropriate server:
-geodatabase: C:\Users\Peter\Documents\ArcGIS\Projects\MyProject2\MyProject2.gdb # FILEDIR (absolute)
+geodatabase: C:\Users\Peter\Documents\ArcGIS\Projects\MyProject2\vom (2).sde # FILEDIR (absolute)
 
 project_name: testing
 project_name_short: tst

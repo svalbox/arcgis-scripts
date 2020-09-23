@@ -83,7 +83,7 @@ class WordpressClient:
             arcpy.AddMessage('Have you tried checking the server .htaccess file for correct rule-rewriting?')
             raise
 
-    def upload_worpress_media(self,file):
+    def upload_worpress_media(self,file,**kwargs):
         '''
         :param file: media file to be uploaded to the wordpress site.
         :return:
@@ -91,12 +91,20 @@ class WordpressClient:
         media = {'file': open(file, 'rb')}
         image = requests.post(self.url + '/media', headers=self.headers, files=media)
         try:
-            self.imsrc = json.loads(image.content.decode('utf-8'))['link']
+            self.imsrc = json.loads(image.content.decode('utf-8'))['guid']['raw'] # bugfix for ['link']
             self.imID = json.loads(image.content.decode('utf-8'))['id']
         except:
             arcpy.AddError(f'Login failed with request code {image}. \
                            If Response [401], please check .htaccess for access.')
             raise
+
+        if "img360" in kwargs and kwargs["img360"]:
+            post = {"title": os.path.basename(file),
+                'caption': '360 image',
+                    'description': '360 image used for the interactive basemap.',
+                    'slug': os.path.basename(file)
+                    }
+            r = requests.post(self.url + '/media/'+str(self.imID), headers=self.headers, json=post)
 
         self.media_params = {'Image':
                         {'path': file,

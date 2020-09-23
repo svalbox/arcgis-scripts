@@ -6,8 +6,10 @@ import datetime
 import numpy as np
 import pandas as pd
 import arcpy
+from API import Wordpress as WP
 
 from importlib import reload
+from pathlib import Path
 import logging
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 logger = logging.getLogger()
@@ -236,12 +238,65 @@ def StoreProjectCampaign(cfg,**kwargs):
         with arcpy.da.InsertCursor(classes[key]['path'], field_keys) as cursor_pnt:
             point_row=cursor_pnt.insertRow(field_values)
             
+def Store360Image(cfg,**kwargs):
+    arcpy.env.workspace = cfg['geodatabase']
+    cfg['temp_env'] = os.environ.get('TEMP', 'TMP')
+    arcpy.env.overwriteOutput = True
+    
+    classes = {'POINT': {'name': 'images360'},
+               }
+    
+    classes = check_classes_v2(classes)
+    
+    try:
+        latest = arcpy.da.SearchCursor(
+            classes['POINT']['path'], 
+            ["image_identifier"], 
+            f"image_identifier LIKE '{datetime.date.today().year}-%'", 
+            sql_clause = (None, "ORDER BY image_identifier DESC")
+            ).next()[0]
+        if int(latest.split('-')[0]) == cfg['image_acquisition_date'].year:
+                    dbID_no = str(int(latest.split('-')[1]) + 1).zfill(4)
+        else: 
+            raise
+    except:
+        dbID_no = "1".zfill(4)
+    
+    cfg['image_identifier'] = \
+        f"{cfg['image_acquisition_date'].year}-{dbID_no}"
+        
+    # WordPress = WP.WordpressClient()
+    # cfg['data_path'].rename(Path(cfg['data_path'].parent,"360img_"+cfg['image_identifier']+cfg['data_path'].suffix))
+    # cfg['data_path'] = Path(cfg['data_path'].parent,"360img_"+cfg['image_identifier']+cfg['data_path'].suffix)
+    
+    # WordPress.upload_worpress_media(cfg['data_path'])
+    # cfg['svalbox_URL'] = WordPress.imsrc
+    # cfg['svalbox_imgID'] = WordPress.imID
+    
+    del cfg['data_path']
+        
+    centroid_coords = arcpy.Point(cfg['image_longitude_wgs84'], cfg['image_latitude_wgs84'])
+    # If getting an error when running that the geometries are not supported, make sure to check that the Z and/or M coordinates are correctly defined here!
+    centroid_geom = arcpy.PointGeometry(centroid_coords, arcpy.SpatialReference(4326))
+    centroid_proj = centroid_geom.projectAs(sr_out)
+    centroid_point = centroid_proj.firstPoint
+        
+    for key in classes:
+        create_fields_from_config(classes[key],cfg)
+        
+    field_keys = [i.name for i in arcpy.ListFields(classes[key]['path']) if i.name in cfg]
+    field_values = [cfg[i.name] for i in arcpy.ListFields(classes[key]['path']) if i.name in cfg]
+    
+    for key in classes:
+        with arcpy.da.InsertCursor(classes[key]['path'], field_keys + ["SHAPE@"]) as cursor_pnt:
+            point_row=cursor_pnt.insertRow(field_values + [centroid_point])
+            
 def StoreSample(cfg,**kwargs):
     arcpy.env.workspace = cfg['geodatabase']
     cfg['temp_env'] = os.environ.get('TEMP', 'TMP')
     arcpy.env.overwriteOutput = True
     
-    classes = {'POINT': {'name': 'Handsamples'},
+    classes = {'POINT': {'name': 'handsamples'},
                }
     classes = check_classes_v2(classes)
     
@@ -262,7 +317,7 @@ def StoreSample(cfg,**kwargs):
     cfg['sample_identifier'] = \
         f"{cfg['sampling_date'].year}-{dbID_no}"
         
-    cfg['sample_name'] = 
+    cfg['sample_name'] = f'Rock sample ({cfg["sample_identifier"]})'
         
     del cfg['data_path']
         
