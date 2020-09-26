@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 import arcpy
 from API import Wordpress as WP
+from API import Archive as AC
 
 from importlib import reload
 from pathlib import Path
@@ -43,6 +44,7 @@ def AddFields(fc,fields):
                 raise
                 
 def create_fields_from_config(fc,a_dict):
+    logger.warning("The targeted service has to have been stopped prior to the addition of extra fields!")
     for k, v in a_dict.items():
         if not isinstance(v, dict):
             if not k in ['geodatabase','temp_env']:
@@ -248,6 +250,13 @@ def Store360Image(cfg,**kwargs):
     
     classes = check_classes_v2(classes)
     
+    edit = arcpy.da.Editor(arcpy.env.workspace)
+    try:
+        edit.startEditing(True, False)
+        edit.startOperation()
+    except:
+        pass
+    
     try:
         latest = arcpy.da.SearchCursor(
             classes['POINT']['path'], 
@@ -265,13 +274,14 @@ def Store360Image(cfg,**kwargs):
     cfg['image_identifier'] = \
         f"{cfg['image_acquisition_date'].year}-{dbID_no}"
         
-    # WordPress = WP.WordpressClient()
-    # cfg['data_path'].rename(Path(cfg['data_path'].parent,"360img_"+cfg['image_identifier']+cfg['data_path'].suffix))
-    # cfg['data_path'] = Path(cfg['data_path'].parent,"360img_"+cfg['image_identifier']+cfg['data_path'].suffix)
+    WordPress = WP.WordpressClient()
+    ArchiveClient = AC.ArchiveClient(archivedir='//gis/Svalbox-DB/IMG360-DB')
+    ArchiveClient.store_360_image(cfg)
     
-    # WordPress.upload_worpress_media(cfg['data_path'])
-    # cfg['svalbox_URL'] = WordPress.imsrc
-    # cfg['svalbox_imgID'] = WordPress.imID
+    WordPress.upload_worpress_media(cfg['data_path'])
+    cfg['svalbox_url'] = WordPress.imsrc
+    cfg['svalbox_i0wpurl'] = "https://i0.wp.com/"+WordPress.imsrc.split("http://")[1]
+    cfg['svalbox_imgid'] = WordPress.imID
     
     del cfg['data_path']
         
@@ -284,12 +294,22 @@ def Store360Image(cfg,**kwargs):
     for key in classes:
         create_fields_from_config(classes[key],cfg)
         
+    classes = check_classes_v2(classes)
+    
     field_keys = [i.name for i in arcpy.ListFields(classes[key]['path']) if i.name in cfg]
     field_values = [cfg[i.name] for i in arcpy.ListFields(classes[key]['path']) if i.name in cfg]
     
     for key in classes:
         with arcpy.da.InsertCursor(classes[key]['path'], field_keys + ["SHAPE@"]) as cursor_pnt:
             point_row=cursor_pnt.insertRow(field_values + [centroid_point])
+
+    try:
+        edit.stopOperation()
+        edit.stopEditing(True)
+    except:
+        pass
+    
+    ArchiveClient.store_cfg_as_yml(cfg)
             
 def StoreSample(cfg,**kwargs):
     arcpy.env.workspace = cfg['geodatabase']

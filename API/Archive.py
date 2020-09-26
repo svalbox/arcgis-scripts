@@ -13,6 +13,7 @@ import numpy as np
 from distutils.dir_util import copy_tree
 from shutil import copyfile
 from pathlib import Path
+import yaml
 
 class ArchiveClient:
     def __init__(self,archivedir='Z:/VOM-DB'):
@@ -61,6 +62,27 @@ class ArchiveClient:
             text_file.write(f'Svalbox ID: {id_svalbox}\nSketchFab ID: {id_sketchfab}')
         
         return dir_target
+        
+    def store_360_image(self,cfg):
+        self.storage_path = target_data_path = Path(
+            self.ArchiveDir,
+            str(cfg['image_acquisition_date'].year), 
+            cfg['image_identifier']
+            )
+        target_data_path.mkdir(parents=True, exist_ok=True)
+        target_data_path = Path(target_data_path,"360img_"+cfg['image_identifier']+cfg['data_path'].suffix)
+        if target_data_path.is_file():
+            print("File already exists on server!")
+            raise
+        else:
+            copyfile(cfg['data_path'],target_data_path)
+        cfg['data_path'] = Path(target_data_path)
+        
+        return cfg
+    
+    def store_cfg_as_yml(self,cfg):
+        with open(Path(self.storage_path,'generation_settings.yml'), 'w') as outfile:
+            yaml.dump(cfg, outfile, default_flow_style=False)
         
         
         
