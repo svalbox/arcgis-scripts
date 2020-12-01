@@ -58,7 +58,10 @@ def create_fields_from_config(fc,a_dict):
                     elif isinstance(v, datetime.date):
                         arcpy.AddField_management(fc['path'], k, 'DATE')
                     elif isinstance(v, int):
-                        arcpy.AddField_management(fc['path'], k, 'LONG')
+                        if v and 'project_no' in k:
+                            arcpy.AddField_management(fc['path'], k, 'TEXT', field_length=100)
+                        else:
+                            arcpy.AddField_management(fc['path'], k, 'LONG')
                     elif isinstance(v, float):
                         arcpy.AddField_management(fc['path'], k, 'DOUBLE')
         else:
@@ -218,7 +221,7 @@ def StoreProjectCampaign(cfg,**kwargs):
         latest = arcpy.da.SearchCursor(
             classes['POINT']['path'], 
             ["campaign_identifier"], 
-            f"campaign_identifier LIKE '{datetime.date.today().year}-%'", 
+            f"campaign_identifier LIKE '{cfg['start_date'].year}-%'", 
             sql_clause = (None, "ORDER BY campaign_identifier DESC")
             ).next()[0]
         if int(latest.split('-')[0]) == cfg['start_date'].year:
@@ -261,7 +264,7 @@ def Store360Image(cfg,**kwargs):
         latest = arcpy.da.SearchCursor(
             classes['POINT']['path'], 
             ["image_identifier"], 
-            f"image_identifier LIKE '{datetime.date.today().year}-%'", 
+            f"image_identifier LIKE '{'image_acquisition_date'.year}-%'", 
             sql_clause = (None, "ORDER BY image_identifier DESC")
             ).next()[0]
         if int(latest.split('-')[0]) == cfg['image_acquisition_date'].year:
@@ -276,12 +279,14 @@ def Store360Image(cfg,**kwargs):
         
     WordPress = WP.WordpressClient()
     ArchiveClient = AC.ArchiveClient(archivedir='//gis/Svalbox-DB/IMG360-DB')
-    ArchiveClient.store_360_image(cfg)
+    cfg = ArchiveClient.store_360_image(cfg)
     
-    WordPress.upload_worpress_media(cfg['data_path'])
-    cfg['svalbox_url'] = WordPress.imsrc
-    cfg['svalbox_i0wpurl'] = "https://i0.wp.com/"+WordPress.imsrc.split("http://")[1]
-    cfg['svalbox_imgid'] = WordPress.imID
+    if not all (key in cfg for key in ('svalbox_url','svalbox_i0wpurl','svalbox_imgid')):
+        # Double check whether file already exists on Wordpress, if it does, ignore
+        WordPress.upload_worpress_media(cfg['data_path'])
+        cfg['svalbox_url'] = WordPress.imsrc
+        cfg['svalbox_i0wpurl'] = "https://i0.wp.com/"+WordPress.imsrc.split("http://")[1]
+        cfg['svalbox_imgid'] = WordPress.imID
     
     del cfg['data_path']
         
@@ -324,7 +329,7 @@ def StoreSample(cfg,**kwargs):
         latest = arcpy.da.SearchCursor(
             classes['POINT']['path'], 
             ["sample_identifier"], 
-            f"sample_identifier LIKE '{datetime.date.today().year}-%'", 
+            f"sample_identifier LIKE '{cfg['sampling_date'].year}-%'", 
             sql_clause = (None, "ORDER BY sample_identifier DESC")
             ).next()[0]
         if int(latest.split('-')[0]) == cfg['sampling_date'].year:

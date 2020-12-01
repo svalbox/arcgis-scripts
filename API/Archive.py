@@ -14,6 +14,7 @@ from distutils.dir_util import copy_tree
 from shutil import copyfile
 from pathlib import Path
 import yaml
+import API.read_yaml as ryaml
 
 class ArchiveClient:
     def __init__(self,archivedir='Z:/VOM-DB'):
@@ -70,17 +71,25 @@ class ArchiveClient:
             cfg['image_identifier']
             )
         target_data_path.mkdir(parents=True, exist_ok=True)
-        target_data_path = Path(target_data_path,"360img_"+cfg['image_identifier']+cfg['data_path'].suffix)
-        if target_data_path.is_file():
+        self.file_path = target_file_path = Path(target_data_path,"360img_"+cfg['image_identifier']+cfg['data_path'].suffix)
+        if target_file_path.is_file():
             print("File already exists on server!")
-            raise
+            cfg = ryaml.read_yaml(Path(self.storage_path,'generation_settings.yml'))
         else:
-            copyfile(cfg['data_path'],target_data_path)
-        cfg['data_path'] = Path(target_data_path)
+            copyfile(cfg['data_path'],target_file_path)
+        cfg['data_path'] = Path(target_file_path)
         
         return cfg
     
+    def undo_store_360_image(self):
+        print("Unlinked/removed image file data stored on fileserver.")
+        self.file_path.unlink()
+    
     def store_cfg_as_yml(self,cfg):
+        try:
+            del cfg['temp_env']
+        except:
+            pass
         with open(Path(self.storage_path,'generation_settings.yml'), 'w') as outfile:
             yaml.dump(cfg, outfile, default_flow_style=False)
         
