@@ -2,24 +2,17 @@
 
 #### Project-level parameters:
 
-# ArcGIS geodabase file to load - make sure to include absolute file paths:
-geodatabase: # FILEDIR (absolute)
-
 model:
     name: # STRING
     place: # STRING
     region:  # PICK: Hopen / Spitsbergen / Kong Karls Land / Edgeøya / Barentsøya / Tusenøyane / Nordaustlandet / Kvitøya / Prins Karls Forland / Bjørnøya / Other 
     
 data:
-    package_directory: # FOLDER DIR (absolute)
-    data_subdirectory: # DATA FOLDER DIR (relative to package_direcory)
+    project_directory: # FOLDER DIR (absolute)
     overview_img: # FILE DIR (relative to package_directory)
-    texture_zip: # ZIP FILE DIR (relative to package_direcory)
     model_file: # MODEL FILE NAME (relative to package_direcory)
     model_crs:  # INT EPSG number of model CRS
     sketchfab_upload_package: # OPTIONAL - ZIP DIR (relative to package_directory)
-    model_long:  # OPTIONAL - FLOAT longitude of model centroid point (in CRS)
-    model_lat:  # OPTIONAL - FLOAT latitude of model centroid point (in CRS)
     description_file: "" # TXT FILE DIR (relative to package directory)
     
 metadata:
@@ -35,5 +28,3 @@ metadata:
     processing_quality: # PICK bad / average / good / excellent / None
     sketchfab_id: # STRING sketchfab ID
     reference: # STRING contact information/person in charge
-    tag: # STRING, item separator: ;
-    category: # STRING, item separator: ;

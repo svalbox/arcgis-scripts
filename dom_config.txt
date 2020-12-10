@@ -1,0 +1,30 @@
+# This is an example yaml configuration for a metashape run
+
+#### Project-level parameters:
+
+model:
+    place: Longyearbyen # STRING
+    region: Svalbard # PICK: Hopen / Spitsbergen / Kong Karls Land / Edgeøya / Barentsøya / Tusenøyane / Nordaustlandet / Kvitøya / Prins Karls Forland / Bjørnøya / Other 
+    
+data:
+    data_path: C:\Users\Peter\Downloads\UNIS_3051_20180827_Spit_Sarstangen_Sarsøyra1_U # FOLDER DIR (absolute)
+    overview_img: image_overview.JPG # FILE DIR (relative to data_path)
+    model_file: Sarsoyra.obj # MODEL FILE NAME (relative to data_path)
+    model_crs_epsg: 32633 # INT EPSG number of model CRS
+    description_file: description.txt # TXT FILE DIR (relative to data_path)
+    
+metadata:
+    acquisition_date: 10.12.2020 # STRING DD.MM.YYYY
+    acquisition_type: Boat # PICK Boat / UAV / Handheld / Combination
+    acquisition_user: Peter Betlem # STRING Data collector
+    data_owner: Peter Betlem # STRING Project owner
+    data_processing_contact: Peter Betlem # STRING in charge of processing
+    data_contact: Peter Betlem # STRING contact information/person in charge
+    unis_project_no: 123456 #
+    unis_project_owner: Peter Betlem #
+    acquisition_distance2outcrop: 86.5 # FLOAT, distance to outcrop
+    processing_images: 105 # INT number of images used for the model
+    processing_calibration: Marker (dGPS) # PICK: Built-in (GPS) / Marker (GPS) / Marker (dGPS) / None
+    processing_resolution: 15.1 # FLOAT resolution in cm/pixel
+    processing_quality: bad # PICK bad / average / good / excellent / None
+    sketchfab_id: bf3b54faa2554771a6c49c30638544fb # STRING sketchfab ID
