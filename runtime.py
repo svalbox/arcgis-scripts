@@ -1,10 +1,15 @@
-import arcpy
+try:
+    import arcpy
+except:
+    from Archook import archook
+    archook.get_arcpy(pro=True)
 import os
 from API.RetrievePasswords import Passwords
 from API.SketchFab import SketchfabClient
 from API.Wordpress import WordpressClient
 from API.Archive import ArchiveClient as AC
 import API.ArcGISPro as AGP
+from API.common import try_parsing_date
 import sys
 from time import sleep
 
@@ -30,22 +35,13 @@ def import_model_and_upload_to_wordpress(cfg,**kwargs):
     
     """
     Input standardisation 
-    """
-    
-    def try_parsing_date(text):
-        for fmt in ('%Y-%m-%d', '%d.%m.%Y', '%d/%m/%Y'):
-            try:
-                return datetime.strptime(text, fmt)
-            except ValueError:
-                pass
-        raise ValueError('no valid date format found')
-        
+    """      
     try: # fixing the acquisition date into a changable format
         cfg['metadata']['acquisition_date'] = \
             try_parsing_date(cfg['metadata']['acquisition_date']) 
     except:
         cfg['metadata']['acquisition_date'] = \
-            datetime.datetime.strptime(
+            datetime.strptime(
                 cfg['metadata']['acquisition_date'], '%d.%m.%Y %H:%M:%S')
     
     
@@ -206,6 +202,11 @@ def import_model_and_upload_to_wordpress(cfg,**kwargs):
     """
     Updating the Wordpress post with the correct information
     """
+    if isinstance(cfg['metadata']['acquisition_date'],datetime):
+        date = datetime.strftime(cfg['metadata']['acquisition_date'],"%Y%m%d")
+    else:
+        raise TypeError
+    
     WordPress.generate_html(
         iframe= SketchFab.embed_modelSimple(SketchFab.response['uid'], 1000, 750),
         modelname=cfg['model']['name'],
@@ -216,10 +217,10 @@ def import_model_and_upload_to_wordpress(cfg,**kwargs):
             'Region': cfg['model']['region'],
             'Northing/Longitude': round(cfg['data']['model_long'],2),
             'Easting/Latitude': round(cfg['data']['model_lat'],2),
-            'Spatial reference': 'epsg:'+str(cfg['data']['model_crs']), # expand upon this...
+            'Spatial reference': 'epsg:32633'#+str(cfg['metadata']['epsg']), # expand upon this...
         },
         model_specs={
-            'Date acquired': cfg['metadata']['acquisition_date'],
+            'Date acquired': date,
             'Acquired by': cfg['model']['name'],
             'Acquisition method': cfg['metadata']['acquisition_type'],
             'Processed by': cfg['metadata']['processing_user'],
@@ -231,7 +232,6 @@ def import_model_and_upload_to_wordpress(cfg,**kwargs):
             'Reference': cfg['metadata']['reference']})
 
     post['content'] = WordPress.html
-
     WordPress.create_wordpress_post(post,featured_media=WordPress.imID,publish=True,update=True)
 
     """

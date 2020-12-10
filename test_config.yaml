@@ -1,0 +1,39 @@
+# This is an example yaml configuration for a metashape run
+
+#### Project-level parameters:
+
+# ArcGIS geodabase file to load - make sure to include absolute file paths:
+geodatabase: C:\Users\Peter\Documents\ArcGIS\Projects\MyProject2\MyProject2.gdb # FILEDIR (absolute)
+
+model:
+    name: bla bla bla # STRING
+    place: bla die bla # STRING
+    region: Hopen # PICK: Hopen / Spitsbergen / Kong Karls Land / Edgeøya / Barentsøya / Tusenøyane / Nordaustlandet / Kvitøya / Prins Karls Forland / Bjørnøya / Other 
+    
+data:
+    package_directory: C:\Server\PhD\Fieldwork # FOLDER DIR (absolute)
+    data_subdirectory: C:\Server\PhD\Fieldwork # DATA FOLDER DIR (relative to package_direcory)
+    overview_img: C:\Server\PhD\Fieldwork # FILE DIR (relative to package_directory)
+    texture_zip: C:\Server\PhD\Fieldwork # ZIP FILE DIR (relative to package_direcory)
+    model_file: C:\Server\PhD\Fieldwork\Fold.obj # MODEL FILE NAME (relative to package_direcory)
+    model_crs: 32633 # INT EPSG number of model CRS
+    sketchfab_upload_package: # OPTIONAL - ZIP DIR (relative to package_directory)
+    model_long:  # OPTIONAL - FLOAT longitude of model centroid point (in CRS)
+    model_lat:  # OPTIONAL - FLOAT latitude of model centroid point (in CRS)
+    description_file: C:\Server\PhD\Fieldwork\test.txt # TXT FILE DIR (relative to package directory)
+    
+metadata:
+    acquisition_date: 20.10.2020 # STRING DD.MM.YYYY
+    acquisition_type: Boat # PICK Boat / UAV / Handheld / Combination
+    acquisition_user: Peter Betlem # STRING Data collector
+    operator: UNIS # STRING Project owner
+    acquisition_distance2outcrop: 105.0 # FLOAT, distance to outcrop
+    processing_user: Peter Betlem # STRING in charge of processing
+    processing_images: 105 # INT number of images used for the model
+    processing_calibration: Built-in (GPS) # PICK: Built-in (GPS) / Marker (GPS) / Marker (dGPS) / None
+    processing_resolution: 10.6 # FLOAT resolution in cm/pixel
+    processing_quality: bad # PICK bad / average / good / excellent / None
+    sketchfab_id: 1001asd1 # STRING sketchfab ID
+    reference: Peter Betlem # STRING contact information/person in charge
+    tag: test # STRING, item separator: ;
+    category: test # STRING, item separator: ;

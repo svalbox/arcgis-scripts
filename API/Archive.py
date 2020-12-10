@@ -7,12 +7,14 @@ Created on Mon Jan 20 12:25:25 2020
 
 import os
 import sys
-import datetime as dt
+from datetime import datetime
 import pandas as pd
 import numpy as np
 from distutils.dir_util import copy_tree
 from shutil import copyfile
 from pathlib import Path
+import yaml
+import API.read_yaml as ryaml
 
 class ArchiveClient:
     def __init__(self,archivedir='Z:/VOM-DB'):
@@ -39,8 +41,8 @@ class ArchiveClient:
                              }
         
         ## Changing the date formatting
-        if isinstance(cfg['metadata']['acquisition_date'],dt.datetime):
-            date = dt.datetime.strftime(cfg['metadata']['acquisition_date'],"%Y%m%d")
+        if isinstance(cfg['metadata']['acquisition_date'],datetime):
+            date = datetime.strftime(cfg['metadata']['acquisition_date'],"%Y%m%d")
         else:
             raise TypeError
         
@@ -61,6 +63,35 @@ class ArchiveClient:
             text_file.write(f'Svalbox ID: {id_svalbox}\nSketchFab ID: {id_sketchfab}')
         
         return dir_target
+        
+    def store_360_image(self,cfg):
+        self.storage_path = target_data_path = Path(
+            self.ArchiveDir,
+            str(cfg['image_acquisition_date'].year), 
+            cfg['image_identifier']
+            )
+        target_data_path.mkdir(parents=True, exist_ok=True)
+        self.file_path = target_file_path = Path(target_data_path,"360img_"+cfg['image_identifier']+cfg['data_path'].suffix)
+        if target_file_path.is_file():
+            print("File already exists on server!")
+            cfg = ryaml.read_yaml(Path(self.storage_path,'generation_settings.yml'))
+        else:
+            copyfile(cfg['data_path'],target_file_path)
+        cfg['data_path'] = Path(target_file_path)
+        
+        return cfg
+    
+    def undo_store_360_image(self):
+        print("Unlinked/removed image file data stored on fileserver.")
+        self.file_path.unlink()
+    
+    def store_cfg_as_yml(self,cfg):
+        try:
+            del cfg['temp_env']
+        except:
+            pass
+        with open(Path(self.storage_path,'generation_settings.yml'), 'w') as outfile:
+            yaml.dump(cfg, outfile, default_flow_style=False)
         
         
         

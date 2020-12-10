@@ -1,5 +1,3 @@
 
-database_creation_new.py
-database_connection.py
-database_connection.py
-read_segy.py
+*.pyc
+*.pyc
