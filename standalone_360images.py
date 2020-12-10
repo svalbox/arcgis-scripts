@@ -89,7 +89,7 @@ class catalog_360img():
             self.logger = logger
             
             if type(cfg) == Path:
-                cfg = ryaml(yaml_path)
+                cfg = ryaml(cfg)
        
             self.cfg = detect_lon_lat(cfg)
             postgis_user = 'svalbox:5433/svalbox'
@@ -152,7 +152,7 @@ class catalog_360img():
             self.create_new_entry()
           
             WordPress = WP.WordpressClient()
-            ArchiveClient = AC.ArchiveClient(archivedir='//svalbox/Svalbox-DB/IMG360-DB')
+            ArchiveClient = AC.ArchiveClient()
                 
             try:
                 self.cfg = ArchiveClient.store_360_image(self.cfg)
