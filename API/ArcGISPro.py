@@ -1,12 +1,16 @@
 import os
 import sys
 from time import sleep
+import datetime
 
 import numpy as np
 import pandas as pd
 import arcpy
+from API import Wordpress as WP
+from API import Archive as AC
 
 from importlib import reload
+from pathlib import Path
 import logging
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 logger = logging.getLogger()
@@ -38,6 +42,43 @@ def AddFields(fc,fields):
                                'ArcMAP to temporarily shut down the server. And do not forget restarting it again...'
                                    'P.S.: Please check Error 100 description on SvalDocs, when encountered.')
                 raise
+                
+def create_fields_from_config(fc,a_dict):
+    logger.warning("The targeted service has to have been stopped prior to the addition of extra fields!")
+    for k, v in a_dict.items():
+        if not isinstance(v, dict):
+            if not k in ['geodatabase','temp_env']:
+                lstFields = [i.name for i in arcpy.ListFields(fc['path'])]
+                if not k in lstFields:
+                    if isinstance(v, str):
+                        if v and ('description' in k or 'comment' in k):
+                             arcpy.AddField_management(fc['path'], k, 'TEXT', field_length=5000)
+                        else:
+                             arcpy.AddField_management(fc['path'], k, 'TEXT', field_length=100)
+                    elif isinstance(v, datetime.date):
+                        arcpy.AddField_management(fc['path'], k, 'DATE')
+                    elif isinstance(v, int):
+                        if v and 'project_no' in k:
+                            arcpy.AddField_management(fc['path'], k, 'TEXT', field_length=100)
+                        else:
+                            arcpy.AddField_management(fc['path'], k, 'LONG')
+                    elif isinstance(v, float):
+                        arcpy.AddField_management(fc['path'], k, 'DOUBLE')
+        else:
+            pass
+            #create_fields_from_config(fc, v)
+    
+    
+def check_classes_v2(classes):
+    for fc in classes:
+        fc_path = classes[fc]['path'] = os.path.join(arcpy.env.workspace, classes[fc]['name'])
+
+        # Check if feature classes exist
+        if not arcpy.Exists(classes[fc]['path']):
+            arcpy.AddMessage('\nCreating {} feature class...'.format(fc))
+            arcpy.CreateFeatureclass_management(arcpy.env.workspace, os.path.basename(fc_path), fc,
+                                                spatial_reference=sr_out)
+    return classes
 
 def CheckClasses(classes,fields):
     for fc in classes:
@@ -73,8 +114,11 @@ def CreateGeometries(config,classes,fields,**kwargs):
 
     #     for some reason it wants an editing session, probably because it´s versioned and must be locked
     edit = arcpy.da.Editor(arcpy.env.workspace)
-    edit.startEditing(True, False)
-    edit.startOperation()
+    try:
+        edit.startEditing(True, False)
+        edit.startOperation()
+    except:
+        pass
 
     fields_list = fields.items()
     fields_keys = [x[0] for x in fields_list]
@@ -117,22 +161,23 @@ def CreateGeometries(config,classes,fields,**kwargs):
                                           algorithm='POINT_REMOVE',
                                           tolerance=10)
 
-        cursor_poly = arcpy.da.InsertCursor(classes['POLYGON']['path'], fields_keys + ["SHAPE@"])
-        arcpy.AddMessage('Created Simplified Polygon.')
-        logger.info('Created Simplified Polygon.')
-        for row in arcpy.da.SearchCursor(simplify_path, ['SHAPE@', 'SHAPE@XY']):
-            # Create centroid point
-            centroid_point = row[1]
-            logger.info(fields_keys)
-            logger.debug(row)
-
-            poly_row=cursor_poly.insertRow(fields_values + [row[0]])
-
-
-            coords_long = centroid_point[0]
-            coords_lat = centroid_point[1]
-
-
+        with arcpy.da.InsertCursor(classes['POLYGON']['path'], fields_keys + ["SHAPE@"]) as cursor_poly:
+            arcpy.AddMessage('Created Simplified Polygon.')
+            logger.info('Created Simplified Polygon.')
+            with arcpy.da.SearchCursor(simplify_path, ['SHAPE@', 'SHAPE@XY']) as cursor_search:
+                for row in cursor_search:
+                    # Create centroid point
+                    centroid_point = row[1]
+                    logger.info(fields_keys)
+                    logger.info(row)
+        
+                    poly_row=cursor_poly.insertRow(fields_values + [row[0]])
+        
+        
+                    coords_long = centroid_point[0]
+                    coords_lat = centroid_point[1]
+    
+    
 
 
     elif (config['model_file'] == "" 
@@ -153,11 +198,169 @@ def CreateGeometries(config,classes,fields,**kwargs):
         point_row=cursor_pnt.insertRow(fields_values + [centroid_point])
         arcpy.AddMessage('Created centre point.')
 
-
-    edit.stopOperation()
-    edit.stopEditing(True)
+    try:
+        edit.stopOperation()
+        edit.stopEditing(True)
+    except:
+        pass
 
     return coords_long, coords_lat
+
+def StoreProjectCampaign(cfg,**kwargs):
+    arcpy.env.workspace = cfg['geodatabase']
+    cfg['temp_env'] = os.environ.get('TEMP', 'TMP')
+    arcpy.env.overwriteOutput = True
+    
+    classes = {'POINT': {'name': 'points'},
+               'POLYGON': {'name': 'polygons'}
+               }
+    
+    classes = check_classes_v2(classes)
+    
+    try:
+        latest = arcpy.da.SearchCursor(
+            classes['POINT']['path'], 
+            ["campaign_identifier"], 
+            f"campaign_identifier LIKE '{cfg['start_date'].year}-%'", 
+            sql_clause = (None, "ORDER BY campaign_identifier DESC")
+            ).next()[0]
+        if int(latest.split('-')[0]) == cfg['start_date'].year:
+                    dbID_no = str(int(latest.split('-')[1]) + 1).zfill(4)
+        else: 
+            raise
+    except:
+        dbID_no = "1".zfill(4)
+    
+    cfg['campaign_identifier'] = \
+        f"{cfg['campaign_start_date'].year}-{dbID_no}"
+    for key in classes:
+        create_fields_from_config(classes[key],cfg)
+        
+    field_keys = [i.name for i in arcpy.ListFields(classes[key]['path']) if i.name in cfg]
+    field_values = [cfg[i.name] for i in arcpy.ListFields(classes[key]['path']) if i.name in cfg]
+    for key in classes:
+        
+        with arcpy.da.InsertCursor(classes[key]['path'], field_keys) as cursor_pnt:
+            point_row=cursor_pnt.insertRow(field_values)
+            
+def Store360Image(cfg,**kwargs):
+    arcpy.env.workspace = cfg['geodatabase']
+    cfg['temp_env'] = os.environ.get('TEMP', 'TMP')
+    arcpy.env.overwriteOutput = True
+    
+    classes = {'POINT': {'name': 'images360'},
+               }
+    
+    classes = check_classes_v2(classes)
+    
+    edit = arcpy.da.Editor(arcpy.env.workspace)
+    try:
+        edit.startEditing(True, False)
+        edit.startOperation()
+    except:
+        pass
+    
+    try:
+        latest = arcpy.da.SearchCursor(
+            classes['POINT']['path'], 
+            ["image_identifier"], 
+            f"image_identifier LIKE '{'image_acquisition_date'.year}-%'", 
+            sql_clause = (None, "ORDER BY image_identifier DESC")
+            ).next()[0]
+        if int(latest.split('-')[0]) == cfg['image_acquisition_date'].year:
+                    dbID_no = str(int(latest.split('-')[1]) + 1).zfill(4)
+        else: 
+            raise
+    except:
+        dbID_no = "1".zfill(4)
+    
+    cfg['image_identifier'] = \
+        f"{cfg['image_acquisition_date'].year}-{dbID_no}"
+        
+    WordPress = WP.WordpressClient()
+    ArchiveClient = AC.ArchiveClient(archivedir='//gis/Svalbox-DB/IMG360-DB')
+    cfg = ArchiveClient.store_360_image(cfg)
+    
+    if not all (key in cfg for key in ('svalbox_url','svalbox_i0wpurl','svalbox_imgid')):
+        # Double check whether file already exists on Wordpress, if it does, ignore
+        WordPress.upload_worpress_media(cfg['data_path'])
+        cfg['svalbox_url'] = WordPress.imsrc
+        cfg['svalbox_i0wpurl'] = "https://i0.wp.com/"+WordPress.imsrc.split("http://")[1]
+        cfg['svalbox_imgid'] = WordPress.imID
+    
+    del cfg['data_path']
+        
+    centroid_coords = arcpy.Point(cfg['image_longitude_wgs84'], cfg['image_latitude_wgs84'])
+    # If getting an error when running that the geometries are not supported, make sure to check that the Z and/or M coordinates are correctly defined here!
+    centroid_geom = arcpy.PointGeometry(centroid_coords, arcpy.SpatialReference(4326))
+    centroid_proj = centroid_geom.projectAs(sr_out)
+    centroid_point = centroid_proj.firstPoint
+        
+    for key in classes:
+        create_fields_from_config(classes[key],cfg)
+        
+    classes = check_classes_v2(classes)
+    
+    field_keys = [i.name for i in arcpy.ListFields(classes[key]['path']) if i.name in cfg]
+    field_values = [cfg[i.name] for i in arcpy.ListFields(classes[key]['path']) if i.name in cfg]
+    
+    for key in classes:
+        with arcpy.da.InsertCursor(classes[key]['path'], field_keys + ["SHAPE@"]) as cursor_pnt:
+            point_row=cursor_pnt.insertRow(field_values + [centroid_point])
+
+    try:
+        edit.stopOperation()
+        edit.stopEditing(True)
+    except:
+        pass
+    
+    ArchiveClient.store_cfg_as_yml(cfg)
+            
+def StoreSample(cfg,**kwargs):
+    arcpy.env.workspace = cfg['geodatabase']
+    cfg['temp_env'] = os.environ.get('TEMP', 'TMP')
+    arcpy.env.overwriteOutput = True
+    
+    classes = {'POINT': {'name': 'handsamples'},
+               }
+    classes = check_classes_v2(classes)
+    
+    try:
+        latest = arcpy.da.SearchCursor(
+            classes['POINT']['path'], 
+            ["sample_identifier"], 
+            f"sample_identifier LIKE '{cfg['sampling_date'].year}-%'", 
+            sql_clause = (None, "ORDER BY sample_identifier DESC")
+            ).next()[0]
+        if int(latest.split('-')[0]) == cfg['sampling_date'].year:
+                    dbID_no = str(int(latest.split('-')[1]) + 1).zfill(4)
+        else: 
+            raise
+    except:
+        dbID_no = "1".zfill(4)
+    
+    cfg['sample_identifier'] = \
+        f"{cfg['sampling_date'].year}-{dbID_no}"
+        
+    cfg['sample_name'] = f'Rock sample ({cfg["sample_identifier"]})'
+        
+    del cfg['data_path']
+        
+    centroid_coords = arcpy.Point(cfg['sampling_longitude_wgs84'], cfg['sampling_latitude_wgs84'])
+    centroid_geom = arcpy.PointGeometry(centroid_coords, arcpy.SpatialReference(4326))
+    centroid_proj = centroid_geom.projectAs(sr_out)
+    centroid_point = centroid_proj.firstPoint
+        
+    for key in classes:
+        create_fields_from_config(classes[key],cfg)
+        
+    field_keys = [i.name for i in arcpy.ListFields(classes[key]['path']) if i.name in cfg]
+    field_values = [cfg[i.name] for i in arcpy.ListFields(classes[key]['path']) if i.name in cfg]
+    
+    for key in classes:
+        with arcpy.da.InsertCursor(classes[key]['path'], field_keys + ["SHAPE@"]) as cursor_pnt:
+            point_row=cursor_pnt.insertRow(field_values + [centroid_point])
+    
 
 def UpdateDatabaseFields(classes,fields, Svalbox_postID):
     classes=CheckClasses(classes,fields)

@@ -1,0 +1,25 @@
+project:
+    name: 
+    name_short:
+    campaign:
+    platform: tent # options include: tent, cabin, skis, foot, boat
+    RiS_id:
+    unis_number:
+    description:
+participants:
+    responsible_1:
+    responsible_2:
+    assistant_1:
+    assistant_2:
+    assistant_3:
+
+period:
+    start_date: 20200801
+    end_date: 20200905
+    
+acknowledgements:
+    funding_1:
+    funding_2:
+    funding_3:
+    funding_4:
+    

@@ -1,0 +1,60 @@
+# This is an example yaml configuration for the archiving of a digitised rock/handsample.
+# Please copy it and place it next to the source data prior to filling in the metadata.
+# The name is automatically generated. As part of the process the configuration settings
+# and image itself is stored on the Svalbox file-server in the following format:
+
+# //gis/Svalbox-DB/IMG360-DB
+# / ---- 2020
+# / -------- 2020-0001
+# / ------------ img360_2020-0001.{extension}
+# / ------------ generation_settings.yml
+# / -------- 2020-0002
+# / ------------ img360_2020-0002.{extension}
+# / ------------ generation_settings.yml
+# / ...
+# / -------- 2020-9999
+# / ------------ img360_2020-9999.{extension}
+# / ------------ generation_settings.yml
+
+##### OBS! #####
+# If multiple entries are to be covered, use a "list" setup:
+#
+# image_owner: #
+#    - Peter Betlem
+#    - Kim Senger
+#
+# versus (when a single item is desired)
+#
+# image_owner: Tom Birchall
+#
+
+##### To be completed by the processing specialist #####
+
+##### Please make absolutely sure not to change any of the metadata keys! #####
+##### Please do not use enter when filling our the metadata. All info     #####
+##### has to be placed within a single line for the processing to work!   #####
+##### ... Or risk the datamanager's wrath ;)                              #####
+
+# Sampling data
+image_acquisition_date: 20200901 #YYYYMMDD
+image_photographer: Kim Senger # Person who sampled it
+image_longitude_wgs84: 14 49 52.499100 # DD.decimals in WGS84, accessed from photo metadata
+image_latitude_wgs84: 78 43 7.215300 # DD.decimals in WGS84, accessed from photo metadata
+image_altitude: 344 # in metres, accessed from photo metadata
+image_locality: Mudderbukta # look it up, based on the coordinates.
+image_area: Isfjorden # Biggest main fjord / land name (e.g., Nordenskioldland)
+image_owner: # owners of the data
+    - Peter Betlem
+    - Kim Senger
+image_processing_contact: Peter Betlem # Person processing the image
+    
+# remaining metadata:
+unis_project_no: 920153 # unis project number affiliated with the campaign
+unis_project_owner: Anna Marie Rose Sartell # unis project owner affiliated with the campaign
+unis_project_campaign: summer2020 # Same as in the project_config_setting
+data_path: F:\Ekmanfjorden\Mavic2pro\20200901\DCIM\100MEDIA\DJI_0379.JPG # path to the 360image
+comment: # A comment, either on acquisition or on processing.
+
+##### To be completed by server administrator #####
+# ArcGIS geodabase file to load - make sure to include absolute file paths and point it to the geodatabase with db_writer/handsample files:
+geodatabase: \\gis\svalbox_server\ArcGIS Project\Project\svalbox_svalbox.sde # FILEDIR (absolute)

@@ -1,0 +1,52 @@
+# This is an example yaml configuration for the archiving of a digitised rock/handsample.
+# The name is automatically generated as a function of locality + rock_type.
+# E.g.: Maaykedalen shale.
+
+# ArcGIS geodabase file to load - make sure to include absolute file paths and point it to the geodatabase with db_writer/handsample files:
+geodatabase: C:\Users\Peter\Documents\ArcGIS\Projects\MyProject2\vom (2).sde # FILEDIR (absolute)
+
+# Geological information
+geo_rock_type: shale# shale, sandstone, etc. keep all lowercase. If multiple, use the itemisation below instead and leave empty.
+#    - shale
+#    - sandstone
+geo_supergroup: a
+geo_group: B
+geo_formation: C
+geo_member: D
+geo_bed:
+
+# Sample information
+sample_age:
+sample_description:  asdhbaskj 
+sample_type: drill core # drill core, pebble, etc.
+
+# Sampling data
+sampling_date: 20200520 #YYYYMMDD
+sampling_contact: Peter # Person who sampled it
+sampling_longitude_wgs84: 18.60 # DD.decimals in WGS84
+sampling_latitude_wgs84: 78.2 # DD.decimals in WGS84
+sampling_locality: LYB
+sampling_area: Nordenskioldland
+sampling_region: Spitsbergen
+
+storage_location: non-existing # Description on where&how the data has been stored, or used for e.g. experiments.
+storage_analysis: 
+
+# Processing data/3d models:
+digital_images_used: 516
+digital_camera_used: askjhda
+digital_lens_used: as a 
+digital_imaging_distance: 123 #i.e., flying altitude from report
+digital_ground_resolution: 123
+digital_sketchfab_id: 12312512
+digital_control_point_no: 20
+
+# remaining metadata:
+unis_project_no: 9272651
+unis_project_campaign: # Same as in the project_config_setting
+owner: Peter Betlem
+data_path: Anna/EK01
+comment: test
+
+
+
