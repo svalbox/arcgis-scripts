@@ -1,17 +1,26 @@
 # -*- coding: utf-8 -*-
-import arcpy
+try:
+    import arcpy
+except:
+    try:
+        import archook
+        archook.get_arcpy(pro=True)
+    except:
+        print("Check https://github.com/JamesRamm/archook for installation.")
 import requests
 import json
 from time import sleep
 from API.RetrievePasswords import Passwords
+import logging
 
 
 class SketchfabClient(object):
 
-    def __init__(self):
+    def __init__(self, logger = logging.getLogger(__name__)):
         self._base_url = r'https://api.sketchfab.com/v3'
         self._headers = {r'Authorization': r'Token {}'.format(Passwords('SketchFab', 'svalbox'))}
-
+        self.logger = logger
+        
     def post_model(self, data, model_path):
         """
         POST a model to Sketchfab's APIs.
@@ -39,24 +48,25 @@ class SketchfabClient(object):
             'maxheight': height
         }
         try:
-            arcpy.AddMessage('Checking whether model has been uploaded to SketchFab (at 1 minute intervals).')
+            self.logger.info('Checking whether model has been uploaded to SketchFab (at 1 minute intervals).')
             for i in range(30):
                 response = self.embed_model(params)
 
                 if 'detail' in response.json().keys():
-                    arcpy.AddMessage("Not ready yet, trying again...")
+                    self.logger.info("Not ready yet, trying again...")
                     sleep(60)
                     continue
 
                 break
 
         except Exception as e:
-            arcpy.AddMessage(u'An error occured: {}'.format(e))
+            self.logger.info(u'An error occured: {}'.format(e))
             raise
 
         if int(response.status_code) not in [200, 201, 202]:
+            self.logger.error(requests.exceptions.HTTPError(str(response)))
             raise requests.exceptions.HTTPError(str(response))
-        arcpy.AddMessage('A corresponding model is available on SketchFab.') #and can be accessed here: https://sketchfab.com/3d-models/{}'.format{response['uid']})
+        self.logger.info('A corresponding model is available on SketchFab.') #and can be accessed here: https://sketchfab.com/3d-models/{}'.format{response['uid']})
         self.response = response.json()
         self.response.update({'uid':model_uid})
         return response
@@ -74,7 +84,7 @@ class SketchfabClient(object):
         """
         Instead of using Sketchfab's Embed function, create our own little iframe.
         """
-        arcpy.AddMessage(f'Embedding SketchFab model {model_uid} into simple HTML iframe')
+        self.logger.info(f'Embedding SketchFab model {model_uid} into simple HTML iframe')
         html = f'<iframe src=https://sketchfab.com/models/{model_uid}/embed width="{width}" height="{height}" ' \
             f'frameborder="0" allowfullscreen="allowfullscreen" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>'
         return html
@@ -122,5 +132,5 @@ if __name__ == '__main__':
         'isInspectable': isInspectable
     }
     A.response = A.post_model(data, model_file).json()
-    arcpy.AddMessage(A.response)
+    # self.logger.info(A.response)
     A.check_upload(A.response['uid'], 1000, 750)

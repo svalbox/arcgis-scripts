@@ -39,7 +39,7 @@ def convert_paths_and_commands(a_dict):
 
 def read_yaml(yml_path):
     yml_path = pathlib.Path(yml_path)
-    with open(yml_path,'r') as ymlfile:
+    with open(yml_path,'r', encoding="utf-8") as ymlfile:
         cfg = yaml.load(ymlfile, Loader=yaml.SafeLoader)
          
     return convert_paths_and_commands(cfg)

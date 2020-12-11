@@ -7,7 +7,7 @@ Created on Sun Sep 13 12:54:17 2020
 from datetime import datetime
 
 def try_parsing_date(text):
-    for fmt in ('%Y-%m-%d','%Y%m%d', '%Y.%m.%d', '%Y/%m/%d'):
+    for fmt in ('%Y-%m-%d','%Y%m%d', '%Y.%m.%d', '%Y/%m/%d', '%d.%m.%Y', '%d/%m/%Y', '%d-%m-%Y'):
         try:
             return datetime.strptime(text, fmt).date()
         except ValueError:

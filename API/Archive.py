@@ -13,10 +13,14 @@ import numpy as np
 from distutils.dir_util import copy_tree
 from shutil import copyfile, rmtree
 from pathlib import Path
+import yaml
+from API.read_yaml import read_yaml as ryaml
+import logging
 
 class ArchiveClient:
-    def __init__(self,archivedir='\\\\SVALBOX\\Svalbox-DB_server'):
+    def __init__(self,archivedir='\\\\SVALBOX\\Svalbox-DB_server', logger = logging.getLogger(__name__)):
         self.ArchiveDir = archivedir
+        self.logger = logger
         
     def createName(self,cfg,id_svalbox):
         dictionary_region = {'Spitsbergen':'Spit',
@@ -67,19 +71,20 @@ class ArchiveClient:
         self.storage_path = target_data_path = Path(
             self.ArchiveDir,
             "DOM-DB",
-            str(cfg['acquisition_date'].year), 
+            str(cfg['metadata']['acquisition_date'].year), 
             cfg['dom_identifier']
             )
+        self.logger.info(f"Storing DOM data in {target_data_path}")
         target_data_path.mkdir(parents = True, exist_ok = True)
         target_config_path = Path(target_data_path,'archive_settings.yml')
         
         if target_config_path.is_file():
-            print("Data already exists on server!")
-            cfg = ryaml.read_yaml(Path(self.storage_path,'archive_settings.yml'))
+            self.logger.warning("Data already exists on server! Re-loading existing archive_settings.yml file...")
+            cfg = ryaml(Path(self.storage_path,'archive_settings.yml'))
         else:
-            copy_tree(cfg["data"]["project_directory"], target_data_path)
-        cfg['data_path'] = Path(target_data_path)
-        
+            copy_tree(str(cfg["data"]["data_path"]), str(target_data_path))
+            self.logger.info(f"DOM data copied over to {target_data_path}")
+        cfg['data']['data_path'] = Path(target_data_path)
         
         # with open(os.path.join(dir_target,"id.txt"), "w") as text_file:
         #     text_file.write(f'Svalbox ID: {id_svalbox}\nSketchFab ID: {id_sketchfab}')
@@ -87,11 +92,9 @@ class ArchiveClient:
         return cfg
     
     def undo_store_dom_data(self):
-        print("Unlinked/removed dom data stored on fileserver.")
-        rmtree(self.storage_path)
-        
-<<<<<<< Updated upstream
-=======
+        self.logger.warning("Unlinked/removed dom data stored on fileserver.")
+        rmtree(self.storage_path, ignore_errors=True)
+
     def store_360_image(self,cfg):
         self.storage_path = target_data_path = Path(
             self.ArchiveDir,
@@ -103,7 +106,7 @@ class ArchiveClient:
         self.file_path = target_file_path = Path(target_data_path,"360img_"+cfg['image_identifier']+cfg['data_path'].suffix)
         if target_file_path.is_file():
             print("File already exists on server!")
-            cfg = ryaml.read_yaml(Path(self.storage_path,'archive_settings.yml'))
+            cfg = ryaml(Path(self.storage_path,'archive_settings.yml'))
         else:
             copyfile(cfg['data_path'],target_file_path)
         cfg['data_path'] = Path(target_file_path)
@@ -112,7 +115,7 @@ class ArchiveClient:
     
     def undo_store_360_image(self):
         print("Unlinked/removed image file data stored on fileserver.")
-        rmtree(self.storage_path)
+        rmtree(self.storage_path, ignore_errors=True)
     
     def store_cfg_as_yml(self,cfg):
         try:
@@ -122,7 +125,6 @@ class ArchiveClient:
         with open(Path(self.storage_path,'archive_settings.yml'), 'w') as outfile:
             yaml.dump(cfg, outfile, default_flow_style=False)
         
->>>>>>> Stashed changes
         
         
         

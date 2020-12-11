@@ -2,14 +2,23 @@ import requests
 import json
 import base64
 import os
-import arcpy
+try:
+    import arcpy
+except:
+    try:
+        import archook
+        archook.get_arcpy(pro=True)
+    except:
+        print("Check https://github.com/JamesRamm/archook for installation.")
 from time import sleep
 import datetime
 from API.RetrievePasswords import Passwords
+import logging
 
 class WordpressClient:
-    def __init__(self):
+    def __init__(self, logger = logging.getLogger(__name__)):
         self.wordpress_authentication()
+        self.logger = logger
 
     def wordpress_authentication(self,user='arcgis',password=Passwords('Svalbox','arcgis'),url='https://svalbox.no/wp-json/wp/v2'):
         '''
@@ -43,7 +52,7 @@ class WordpressClient:
         # data.update({'date': datetime.datetime.now().strftime('%y-%m-%dT%H:%M:%S')})
         # TODO fix the date parameter!
 
-        arcpy.AddMessage('Tags and categories have to be manually selected on the Wordpress page for now. '
+        self.logger.info('Tags and categories have to be manually selected on the Wordpress page for now. '
                          'This will likely be resolved in a future update.')
 
         self.payload = data
@@ -58,7 +67,7 @@ class WordpressClient:
         elif update is True:
             posturl = self.url + '/posts/' + str(self.postresponse['id'])
             portfoliourl = self.url + '/portfolio/' + str(self.postresponse['id'])
-            arcpy.AddMessage('Updating WordPress post {}.'.format(self.postresponse['id']))
+            self.logger.info('Updating WordPress post {}.'.format(self.postresponse['id']))
 
 
         self.headers['Content-Type'] = 'application/json'
@@ -75,12 +84,12 @@ class WordpressClient:
 
         try:
             if update is None:
-                arcpy.AddMessage('A post has been posted to {}.'.format(self.postresponse['link']))
+                self.logger.info('A post has been posted to {}.'.format(self.postresponse['link']))
             elif update is True:
-                arcpy.AddMessage('{} has been updated.'.format(self.postresponse['link']))
+                self.logger.info('{} has been updated.'.format(self.postresponse['link']))
         except:
-            arcpy.AddMessage(self.postresponse)
-            arcpy.AddMessage('Have you tried checking the server .htaccess file for correct rule-rewriting?')
+            self.logger.info(self.postresponse)
+            self.logger.info('Have you tried checking the server .htaccess file for correct rule-rewriting?')
             raise
 
     def upload_worpress_media(self,file):
@@ -94,7 +103,7 @@ class WordpressClient:
             self.imsrc = json.loads(image.content.decode('utf-8'))['link']
             self.imID = json.loads(image.content.decode('utf-8'))['id']
         except:
-            arcpy.AddError(f'Login failed with request code {image}. \
+            self.logger.error(f'Login failed with request code {image}. \
                            If Response [401], please check .htaccess for access.')
             raise
 
@@ -102,12 +111,12 @@ class WordpressClient:
                         {'path': file,
                          'name': os.path.basename(file),
                          'url':self.imsrc}}
-        #arcpy.AddMessage(json.loads(image.content))
-<<<<<<< Updated upstream
-        arcpy.AddMessage('Your image is published on ' + json.loads(image.content)['guid']['rendered'])
-=======
-        if arcpy:
-            arcpy.AddMessage('Your image is published on ' + json.loads(image.content)['guid']['rendered'])
+        #self.logger.info(json.loads(image.content))
+        del media
+        self.logger.info('Your image is published on ' + json.loads(image.content)['guid']['rendered'])
+        
+        # if arcpy:
+        #     self.logger.info('Your image is published on ' + json.loads(image.content)['guid']['rendered'])
 
     def delete_wordpress_media(self,imID,**kwargs):
         '''
@@ -125,6 +134,7 @@ class WordpressClient:
             if json.loads(response.content)["deleted"]:
                 self.logger.info(f"Removed image; previous link: {json.loads(response.content)['guid']['raw']}")
         except KeyError:
+            self.logger.error(json.loads(response.content))
             self.logger.error("Failed removal. Manual check needed. Contact admin.")
     
     def delete_wordpress_post(self,post_id,**kwargs):
@@ -144,7 +154,6 @@ class WordpressClient:
                 self.logger.info(f"Removed post; previous link: {json.loads(response.content)['guid']['raw']}")
         except KeyError:
             self.logger.error("Failed removal. Manual check needed. Contact admin.")
->>>>>>> Stashed changes
 
     def generate_html(self,iframe,
                 modelname,
@@ -259,4 +268,4 @@ if __name__ == '__main__':
     # sleep(30)
     post['content']='Even more awesome!'
     A.create_wordpress_post(post,featured_media=A.imID,publish=True,update=True)
-    arcpy.AddMessage(A.media_params)
+    # self.logger.info(A.media_params)

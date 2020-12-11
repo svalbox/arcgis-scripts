@@ -1,3 +1,6 @@
 
 *.pyc
 *.pyc
+database_creation.py
+database_connection.py
+arcpy_functions.py

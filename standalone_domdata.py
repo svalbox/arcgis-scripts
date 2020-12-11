@@ -11,10 +11,11 @@ except:
     try:
         import archook
         archook.get_arcpy(pro=True)
+        import arcpy
     except:
         print("Check https://github.com/JamesRamm/archook for installation.")
 
-
+import io
 import os
 import sys
 from time import sleep
@@ -40,6 +41,8 @@ from API import Archive as AC
 from API import Wordpress as WP
 from API import SketchFab as SF
 from API.RetrievePasswords import Passwords
+import subprocess
+from subprocess import CREATE_NEW_CONSOLE, Popen, PIPE, STDOUT
 
 def convert_crs(geom,crs_in,crs_out="epsg:32633"):
     project = partial(
@@ -62,7 +65,7 @@ def detect_lon_lat(cfg):
     except:
         return cfg
     
-def get_gdf_bounds(sql, engine, attempts = 2, logger = logging.getLogger()):
+def get_gdf_bounds(sql, table, engine, attempts = 2, logger = logging.getLogger()):
     while attempts > 0:
         attempts -= 1
         logger.info("Attempting to connect to PostGIS...")
@@ -94,13 +97,17 @@ class catalog_dom():
         
             self.logger = logger
             
-            if type(cfg) == Path:
+            if type(cfg) == Path or str:
                 self.cfg = ryaml(cfg)
-            with open(Path(
-                     cfg['data']['package_directory'],
-                     cfg['data']['description_file']
+            else:
+                self.cfg = cfg
+                
+            with io.open(Path(
+                     self.cfg['data']['data_path'],
+                     self.cfg['data']['description_file']
                      ), 
-            'r') as file:
+                    encoding = "utf-8",
+                    mode = 'r') as file:
                 self.cfg["model"]["description"] = file.read().replace('\n', '')
             postgis_user = 'svalbox:5433/svalbox'
             self.engine = create_engine(f'postgresql://svalbox:{Passwords("postGIS_svalbox",postgis_user)}@{postgis_user}',
@@ -110,90 +117,98 @@ class catalog_dom():
                                               pool_pre_ping=True,
                                               pool_use_lifo=True)
             
-            self.get_server_data()
+            self.get_server_data(table = "dom_projection")
             
             
-        def _arcpy_functions(self, epsg_no):
+        def _call_arcpy_python(self):
+            venv_python = r'C:\Users\Peter\.conda\envs\ArcGIS\python.exe' # This is the arcpy python environment
+            args = [venv_python, 
+                    r'arcpy_functions.py', 
+                    Path(self.cfg["data"]["data_path"],
+                         self.cfg["data"]["model_file"]),
+                    self.gdf_bounds.crs.to_authority()[1]]
+            subprocess.run(args, stdout=subprocess.PIPE, universal_newlines=True, cwd = '.')
             
-            arcpy.env.workspace = Path("./ArcGIS_dummy/Dummy_project.gdb")
-            self.cfg['temp_env'] = os.environ.get('TEMP', 'TMP')
-            arcpy.env.overwriteOutput = True
+        def get_outline(self):
+            from rasterio import transform
+            from rasterio.features import shapes
+            from shapely.geometry import Polygon, MultiPolygon, Point 
+            import pyvista as pv
             
-            model_path = Path('in_memory', '3D')
-            footprint_path = Path('in_memory', 'footprint')
-            footprint_proj_path = Path(self.cfg['temp_env'], 'outcrop_outline.shp')  # Env for Project can't be in_memory
-            simplify_path = Path(self.cfg['temp_env'], 'simplified.shp')
-    
-            # Import 3D file
-            self.logger.info('Importing 3D model')
-            arcpy.Import3DFiles_3d(in_files=os.path.join(
-                                        self.cfg['data']['package_directory'],
-                                        self.cfg['data']['model_file']),
-                                   out_featureClass=model_path,
-                                   spatial_reference=self.cfg['data']['model_crs'],
-                                   )
-    
-            # Convert to footprint and project to WGS84UTM33N
-            self.logger.info('Calculating footprints')
-            arcpy.MultiPatchFootprint_3d(in_feature_class=model_path,
-                                         out_feature_class=footprint_path)
-   
-            self.logger.info('Footprint calculated. Projecting...')
-            arcpy.Project_management(in_dataset=footprint_path,
-                                     out_dataset=footprint_proj_path,
-                                     out_coor_system=arcpy.SpatialReference(epsg_no),
-                                     )
-    
-            self.logger.info('Projected. Simplifying path...')
-            arcpy.SimplifyPolygon_cartography(in_features=footprint_proj_path,
-                                              out_feature_class=simplify_path,
-                                              algorithm='POINT_REMOVE',
-                                              tolerance=10)
+            model = pv.read(Path(self.cfg["data"]["data_path"],
+                         self.cfg["data"]["model_file"]))
+            zi, yi, xi = np.histogram2d(model.points[:,1], model.points[:,0], bins=(50,50), weights=model.points[:,2], normed=False)
+            zi[zi>0] = 1
+            poly = gpd.GeoDataFrame(crs="EPSG:32633")
             
-            return gpd.GeoDataFrame(simplify_path).geometry.iloc[0]
+            bounds = (model.points[:,0].min(),
+                      model.points[:,1].max(),
+                      model.points[:,0].max(),
+                      model.points[:,1].min())
+                      
+            tform = transform.from_bounds(*bounds,50,50)
+            for shape, value in shapes(zi.reshape((50,50)).astype(int), transform = tform):
+                 edges = shape['coordinates'][0].copy()
+                 d = {'val': [value], 'geometry': [Polygon(edges)]}
+                 poly_row = gpd.GeoDataFrame(d, crs="EPSG:32633")
+                 poly = poly.append(poly_row, ignore_index=True)
+            poly = poly[poly.val>0]
+            poly.plot()
+            MultiPoly = MultiPolygon([p for p in poly.geometry])
+            d = {'val': 1, 'geometry': MultiPoly}
+            multipoly = gpd.GeoDataFrame(d, crs="EPSG:32633")
+            multipoly = multipoly.dissolve(by='val')
+            self.gdf_bounds["shape"] = multipoly.iloc[0].geometry
             
-        def get_server_data(self):
+        def get_server_data(self,table):
        
-           sql = 'SELECT * FROM svalbox.dom'
+           sql = f'SELECT * FROM svalbox.{table}'
 
-           self.gdf_bounds = get_gdf_bounds(sql, self.engine)
+           self.gdf_bounds = get_gdf_bounds(sql, table = table, engine = self.engine)
+               
+               
            #gdf_bounds.plot()
 
         def create_new_entry(self):
                     
-            db_list = self.gdf_bounds.loc[
-                self.gdf_bounds["dom_identifier"].str.contains(f"{self.cfg['metadata']['acquisition_date'].year}-"),
-                "image_identifier"
-                ]
-            
-            db_list.sort_values(inplace=True, ascending=False)
-            db_latest = db_list.head(1).str.split('-').iloc[0]
-            if int(db_latest[0]) == self.cfg['metadata']['acquisition_date'].year:
-                dbID_no = str(int(db_latest[1]) + 1).zfill(4)
-            else:
+            if self.gdf_bounds.empty: # First entry
+                self.idx = 0
+                self.gdf_bounds.loc[self.idx] = None
+                self.gdf_bounds["objectid"] = 0
                 dbID_no = "1".zfill(4)
-            
-            self.cfg['dom_identifier'] = \
-                f"{self.cfg['metadata']['acquisition_date'].year}-{dbID_no}"
+                self.gdf_bounds.crs = "epsg:32633"
                 
-            self.idx = idx = self.gdf_bounds.index.max()+1
-            self.gdf_bounds.loc[idx] = self.gdf_bounds.loc[0].copy()
-            self.gdf_bounds.loc[idx,"objectid"] = self.gdf_bounds.objectid.max()+1
-            self.gdf_bounds.drop(
-                self.gdf_bounds[
-                    self.gdf_bounds["objectid"] != self.gdf_bounds.objectid.max()
-                    ].index,
-                inplace=True
-                )
+            else:
+                db_list = self.gdf_bounds.loc[
+                    self.gdf_bounds["dom_identifier"].str.contains(f"{self.cfg['metadata']['acquisition_date'].year}-"),
+                    "dom_identifier"
+                    ]
+                
+                db_list.sort_values(inplace=True, ascending=False)
+                db_latest = db_list.head(1).str.split('-').iloc[0]
+                if int(db_latest[0]) == self.cfg['metadata']['acquisition_date'].year:
+                    dbID_no = str(int(db_latest[1]) + 1).zfill(4)
+                else:
+                    dbID_no = "1".zfill(4)
+                
+                self.idx = idx = self.gdf_bounds.index.max()+1
+                self.gdf_bounds.loc[idx] = self.gdf_bounds.loc[0].copy()
+                self.gdf_bounds.loc[idx,"objectid"] = self.gdf_bounds.objectid.max()+1
+                self.gdf_bounds.drop(
+                    self.gdf_bounds[
+                        self.gdf_bounds["objectid"] != self.gdf_bounds.objectid.max()
+                        ].index,
+                    inplace=True
+                    )
             
-            
-            self.gdf_bounds["shape"] = self._arcpy_functions(epsg_no = int(self.gdf_bounds.crs.to_authority()[1]))
+                
+            self.cfg['dom_identifier'] = \
+                    f"{self.cfg['metadata']['acquisition_date'].year}-{dbID_no}"    
+            self.get_outline()
             
         def check_sketchfab_for_model(self):
             SketchFab = SF.SketchfabClient()
             SketchFab.check_upload(self.cfg['metadata']['sketchfab_id'], 1000, 750)
-            print(self.cfg['metadata']['sketchfab_id'])
-            print(SketchFab.response['uid'])
             if self.cfg['metadata']['sketchfab_id'] == SketchFab.response['uid']:
                 return SketchFab
             else:
@@ -204,38 +219,37 @@ class catalog_dom():
             SketchFab = self.check_sketchfab_for_model()
             self.create_new_entry()
           
-            self.cfg['data']['model_long'] = self.gdf_bounds.centroid.x
-            self.cfg['data']['model_lat'] = self.gdf_bounds.centroid.y
+            self.cfg['data']['model_long'] = self.gdf_bounds.centroid.x.values[0]
+            self.cfg['data']['model_lat'] = self.gdf_bounds.centroid.y.values[0]
             
             WordPress = WP.WordpressClient()
-            ArchiveClient = AC.ArchiveClient(archivedir='\\svalbox\Svalbox-DB_server\DOM-DB')
+            ArchiveClient = AC.ArchiveClient()
                 
-
             try:
                 self.cfg = ArchiveClient.store_dom_data(self.cfg)
             except:
-                self.logger.error("Failed to archive DOM data onto server. Contact admin.")
+                self.logger.error("Failed to catalog data in PostGIS. Reverting database. Contact admin.")
                 raise
             
-            if not all (key in self.cfg for key in ('svalbox_url','svalbox_imgid')):
+            if not all (key in self.cfg for key in ('svalbox_imgid')):
                 # Double check whether file already exists on Wordpress, if it does, ignore
                 try:
                     WordPress.upload_worpress_media(
                         Path(
-                            self.cfg['data']['package_directory'],
+                            self.cfg['data']['data_path'],
                             self.cfg['data']['overview_img']
                             )
                         )
+                    
+                    self.cfg.update({"svalbox":{"svalbox_imgid":WordPress.imID}})
 
                 except: 
-                    self.logger.error("Failed to upload DOM datapage to Svalbox.no. Contact admin.")
-                    self.logger.warning("Removing archived 360 image files...")
-                    ArchiveClient.undo_store_360_image()
+                    self.logger.error("Failed to catalog data in PostGIS. Reverting database. Contact admin.")
+                    WordPress.delete_wordpress_media(self.cfg['svalbox']["svalbox_imgid"])
+                    ArchiveClient.undo_store_dom_data()
                     raise
-                self.cfg['svalbox']['svalbox_url'] = WordPress.imsrc
-                self.cfg['svalbox']['svalbox_imgid'] = WordPress.imID
              
-            del self.cfg['data_path']
+            del self.cfg['data']['data_path']
             
             if not all (key in self.cfg["metadata"] for key in ("svalbox_post_id")):
                 try:
@@ -244,7 +258,7 @@ class catalog_dom():
                         modelname="DOM_" + self.cfg['dom_identifier'],
                         description=self.cfg["model"]["description"],
                         model_info={
-                            'Locality': self.cfg['model']['name'],
+                            # 'Locality': self.cfg['model']['name'],
                             'Area': self.cfg['model']['place'],
                             'Region': self.cfg['model']['region'],
                             'Northing/Longitude': round(self.cfg['data']['model_long'],2),
@@ -255,15 +269,16 @@ class catalog_dom():
                             'Date acquired': self.cfg['metadata']['acquisition_date'],
                             'Acquisition method': self.cfg['metadata']['acquisition_type'],
                             'Acquired by': self.cfg['metadata']['acquisition_user'],
-                            'Processed by': self.cfg['metadata']['processing_user'],
+                            'Processed by': self.cfg['metadata']['data_processing_contact'],
                             '# images': self.cfg['metadata']['processing_images'],
                             'Calibration': self.cfg['metadata']['processing_calibration'],
                             'Average distance (m)': self.cfg['metadata']['acquisition_distance2outcrop'],
                             'Resolution (cm/pix)': self.cfg['metadata']['processing_resolution'],
-                            'Operator': self.cfg['metadata']['operator'],
+                            'Data contact': self.cfg['metadata']['data_contact'],
+                            'Data owner': self.cfg['metadata']['data_contact'],
                             'Reference': self.cfg['metadata']['reference']})
     
-                    post = {'title': "DOM_" + self.cfg['dom_identifier'],
+                    post = {'title': "DOM_" + self.cfg['dom_identifier'] + f" ({self.cfg['model']['place']})",
                         # 'slug': 'rest-api-1',
                         'status': 'publish',
                         'author': '4',
@@ -277,10 +292,11 @@ class catalog_dom():
                     WordPress.create_wordpress_post(
                         post, 
                         featured_media = WordPress.imID,
-                        publish=False
+                        publish=True
                         )
                     self.cfg['svalbox']['svalbox_post_id'] = WordPress.postresponse['id']
                 except:
+                    self.logger.error("Failed to catalog data in PostGIS. Reverting database. Contact admin.")
                     ArchiveClient.undo_store_dom_data()
                     WordPress.delete_wordpress_media(self.cfg['svalbox']["svalbox_imgid"])
                     raise
@@ -301,30 +317,32 @@ class catalog_dom():
                 self.engine.dispose()
                 
             except:
-                self.logger.error("Failed to catalog data in PostGIS. Contact admin.")
-                self.logger.warning("Removing archived data...")
+                self.logger.error("Failed to catalog data in PostGIS. Reverting database. Contact admin.")
                 ArchiveClient.undo_store_dom_data()
-                self.logger.warning("Removing uploaded image from Svalbox...")
                 WordPress.delete_wordpress_media(self.cfg['svalbox']["svalbox_imgid"])
                 WordPress.delete_wordpress_post(self.cfg['svalbox']["svalbox_post_id"])
                 raise
                 
             ArchiveClient.store_cfg_as_yml(self.cfg)
-            self.logger.info(f"Successfully submitted {self.cfg['image_identifier']}")
+            self.logger.info(f"Successfully submitted {self.cfg['dom_identifier']}")
             
 if '__main__' == __name__:
     logging.basicConfig(stream=sys.stdout, level=logging.INFO)
     logger = logging.getLogger()
     logger.info('Started.')
     
-    yaml_path = Path(r'\\svalbox\Svalbox-DB\IMG360-DB\2020\2020-0042\generation_settings.yml')
-    cfg = ryaml(yaml_path)
-    # cfg['data_path'] = Path(yaml_path.parent, f"360img_{yaml_path.parent.stem}")
-    logger.info(f'Processing {cfg["data_path"].stem}')
+    cfg = "dom_config.txt"
+    A = catalog_dom(cfg)
+    # A.create_new_entry()
+    A.store_data()
+    # yaml_path = Path(r'\\svalbox\Svalbox-DB\IMG360-DB\2020\2020-0042\generation_settings.yml')
+    # cfg = ryaml(yaml_path)
+    # # cfg['data_path'] = Path(yaml_path.parent, f"360img_{yaml_path.parent.stem}")
+    # logger.info(f'Processing {cfg["data_path"].stem}')
     
-    if cfg['unis_project_no'] == None:
-        raise
+    # if cfg['unis_project_no'] == None:
+    #     raise
         
-    dom = catalog_dom(cfg)
-    dom.store_data()
+    # dom = catalog_dom(cfg)
+    # dom.store_data()
     
